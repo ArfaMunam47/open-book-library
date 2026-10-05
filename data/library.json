@@ -1,0 +1,113 @@
+{
+  "categories": [
+    {
+      "id": "cat-1",
+      "name": "Money & Finance",
+      "slug": "money-finance",
+      "description": "Personal finance, wealth management, investing, and economic freedom.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-2",
+      "name": "Business",
+      "slug": "business",
+      "description": "Entrepreneurship, leadership, market strategies, and company building.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-3",
+      "name": "Self Development",
+      "slug": "self-development",
+      "description": "Habit mastery, mental clarity, productivity, and personal transformation.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-4",
+      "name": "Motivation",
+      "slug": "motivation",
+      "description": "Inspiration, grit, mindset, and stories of endurance and achievement.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-5",
+      "name": "Education",
+      "slug": "education",
+      "description": "Academic texts, open textbooks, learning methods, and reference materials.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-6",
+      "name": "Fiction",
+      "slug": "fiction",
+      "description": "Classic public domain literature, stories, poetry, and narrative works.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-7",
+      "name": "Health",
+      "slug": "health",
+      "description": "Physical wellness, nutrition, longevity, and holistic living.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-8",
+      "name": "Technology",
+      "slug": "technology",
+      "description": "Computer science, digital systems, software engineering, and the web.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-9",
+      "name": "Family",
+      "slug": "family",
+      "description": "Parenting, home life, raising children, and household guidance.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-10",
+      "name": "Love & Relationships",
+      "slug": "love-relationships",
+      "description": "Interpersonal communication, empathy, friendship, and connection.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-11",
+      "name": "Religion",
+      "slug": "religion",
+      "description": "Theological essays, philosophical ethics, and spiritual traditions.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-12",
+      "name": "Other",
+      "slug": "other",
+      "description": "General publications, miscellaneous essays, and public records.",
+      "created_at": "2026-10-05T11:10:56.226Z"
+    },
+    {
+      "id": "cat-1791198676132-w1eh1",
+      "name": "Philosophy & Wisdom",
+      "slug": "philosophy-wisdom",
+      "description": "Classical philosophical treatises and modern ethical inquiries.",
+      "created_at": "2026-10-05T11:11:16.132Z"
+    }
+  ],
+  "books": [
+    {
+      "id": "book-1791198657341-jfe6n",
+      "title": "The Way to Wealth",
+      "author": "Benjamin Franklin",
+      "description": "An essay summarizing Benjamin Franklin's aphorisms and practical advice on thrift, personal industry, self-discipline, and wealth accumulation, originally compiled in Poor Richard's Almanack.",
+      "category_id": "cat-1",
+      "cover_url": "",
+      "cover_path": "",
+      "pdf_url": "/uploads/pdfs/the-way-to-wealth.pdf",
+      "pdf_path": "/app/applet/uploads/pdfs/the-way-to-wealth.pdf",
+      "file_size": 4207,
+      "page_count": 3,
+      "published": true,
+      "created_at": "2026-10-05T11:10:57.341Z",
+      "updated_at": "2026-10-05T11:10:57.341Z"
+    }
+  ]
+}

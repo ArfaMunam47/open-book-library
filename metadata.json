@@ -1,0 +1,6 @@
+{
+  "name": "Open Book Library",
+  "description": "Discover, read online, and download free public domain and open-access books.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
