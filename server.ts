@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import multer from 'multer';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import { db, slugify } from './server/db.js';
 import {
@@ -10,13 +11,23 @@ import {
   verifyAdminPassword,
   requireAdminAuth
 } from './server/auth.js';
-import { extractPdfInfo, ensureSampleBooks } from './server/pdf-helper.js';
+import { extractPdfInfo } from './server/pdf-helper.js';
+import { analyzeBook, generateBookDescription } from './server/book-analyzer.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 const isProd = process.env.NODE_ENV === 'production';
+
+// Enable CORS for all origins, supporting credentials and custom headers
+app.use(cors({
+  origin: true,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-token', 'Range', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'Content-Length', 'Content-Disposition']
+}));
 
 // Ensure uploads folder structure exists
 const uploadsDir = path.resolve(process.cwd(), 'uploads');
@@ -25,8 +36,21 @@ const coversDir = path.join(uploadsDir, 'covers');
 if (!fs.existsSync(pdfsDir)) fs.mkdirSync(pdfsDir, { recursive: true });
 if (!fs.existsSync(coversDir)) fs.mkdirSync(coversDir, { recursive: true });
 
-// Seed sample books if empty
-ensureSampleBooks().catch(err => console.error('Sample book check error:', err));
+// Helper to sanitize filenames safely across all operating systems
+function sanitizeFilename(originalName: string, fallbackPrefix: string, forcedExt: string): string {
+  const ext = (path.extname(originalName).toLowerCase() || forcedExt).trim();
+  const rawBase = path.basename(originalName, ext);
+  // Normalize Unicode accents and strip dangerous or non-ASCII characters
+  const cleanBase = rawBase
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9\-_]/g, '_')
+    .replace(/_+/g, '_')
+    .slice(0, 50);
+  const safeBase = cleanBase.length > 0 ? cleanBase : fallbackPrefix;
+  const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  return `${safeBase}_${uniqueSuffix}${ext}`;
+}
 
 // Multer storage configuration
 const storage = multer.diskStorage({
@@ -40,10 +64,15 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    const base = path.basename(file.originalname, ext).replace(/[^\w\-]+/g, '_');
-    const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    cb(null, `${base}_${uniqueSuffix}${ext}`);
+    const isPdf = file.fieldname === 'pdf';
+    if (isPdf) {
+      cb(null, sanitizeFilename(file.originalname, 'book_document', '.pdf'));
+    } else {
+      const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+      const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext) ? ext : '.jpg';
+      const uniqueCover = `cover_${Date.now()}_${Math.random().toString(36).substring(2, 8)}${safeExt}`;
+      cb(null, uniqueCover);
+    }
   }
 });
 
@@ -53,19 +82,25 @@ const upload = multer({
     fileSize: 100 * 1024 * 1024, // 100 MB max for large book PDFs
   },
   fileFilter: (req, file, cb) => {
+    // Graceful validation without terminating the stream prematurely
     if (file.fieldname === 'pdf') {
-      if (file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf')) {
+      const isPdfExt = file.originalname.toLowerCase().endsWith('.pdf');
+      const isPdfMime = file.mimetype.includes('pdf') || file.mimetype === 'application/octet-stream';
+      if (isPdfExt || isPdfMime) {
         cb(null, true);
       } else {
-        cb(new Error('Only PDF files are allowed for the book file.'));
+        (req as any).pdfValidationError = 'Selected file is not a valid PDF.';
+        cb(null, false);
       }
     } else if (file.fieldname === 'cover') {
       const allowedExts = ['.jpg', '.jpeg', '.png', '.webp'];
       const ext = path.extname(file.originalname).toLowerCase();
-      if (allowedExts.includes(ext) || file.mimetype.startsWith('image/')) {
+      const isImgMime = file.mimetype.startsWith('image/');
+      if (allowedExts.includes(ext) || isImgMime) {
         cb(null, true);
       } else {
-        cb(new Error('Only JPG, JPEG, PNG, or WebP files are allowed for the cover image.'));
+        (req as any).coverValidationError = 'Cover must be an image (JPG, PNG, or WebP).';
+        cb(null, false);
       }
     } else {
       cb(null, true);
@@ -76,12 +111,25 @@ const upload = multer({
 // Middleware
 app.use(express.json());
 
-// Serve static uploads
+// Disable caching for all API responses so database mutations reflect immediately everywhere
+app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.setHeader('Surrogate-Control', 'no-store');
+  next();
+});
+
+// Serve static uploads with cross-origin headers to prevent iframe subresource blocking
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
     if (filePath.endsWith('.pdf')) {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'inline');
+    } else if (/\.(jpg|jpeg|png|webp)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     }
   }
 }));
@@ -233,24 +281,69 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
     const { id } = req.params;
     const book = db.getBookById(id);
     if (!book) {
-      res.status(404).send('Book not found');
+      res.status(404).json({ error: 'Book not found' });
       return;
     }
 
-    if (!fs.existsSync(book.pdf_path)) {
-      res.status(404).send('PDF file not found in storage');
+    // Require admin auth only if book is unpublished
+    if (!book.published) {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : (req.headers['x-admin-token'] as string);
+      if (!token || !verifyToken(token)) {
+        res.status(404).json({ error: 'Book not found or unpublished' });
+        return;
+      }
+    }
+
+    if (!book.pdf_path || !fs.existsSync(book.pdf_path)) {
+      res.status(404).json({ error: 'PDF file not found in storage' });
       return;
     }
 
     const cleanFilename = `${slugify(book.title || 'book')}.pdf`;
-    res.download(book.pdf_path, cleanFilename, err => {
-      if (err && !res.headersSent) {
-        console.error('Download error:', err);
-        res.status(500).send('Error downloading file');
-      }
-    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${cleanFilename}"`);
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Range');
+    res.sendFile(path.resolve(book.pdf_path));
   } catch (err: any) {
-    res.status(500).send('Server error downloading book');
+    console.error('Error serving download:', err);
+    res.status(500).json({ error: 'Server error downloading book' });
+  }
+});
+
+// Public: Stream / view book PDF inline
+app.get('/api/pdf/:id', (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const book = db.getBookById(id);
+    if (!book) {
+      res.status(404).json({ error: 'Book not found' });
+      return;
+    }
+
+    if (!book.published) {
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : (req.headers['x-admin-token'] as string);
+      if (!token || !verifyToken(token)) {
+        res.status(404).json({ error: 'Book not found or unpublished' });
+        return;
+      }
+    }
+
+    if (!book.pdf_path || !fs.existsSync(book.pdf_path)) {
+      res.status(404).json({ error: 'PDF file not found in storage' });
+      return;
+    }
+
+    const cleanFilename = `${slugify(book.title || 'book')}.pdf`;
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${cleanFilename}"`);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Range');
+    res.sendFile(path.resolve(book.pdf_path));
+  } catch (err: any) {
+    console.error('Error streaming PDF:', err);
+    res.status(500).json({ error: 'Server error streaming PDF' });
   }
 });
 
@@ -284,7 +377,76 @@ app.get('/api/admin/books', requireAdminAuth, (req: Request, res: Response) => {
   }
 });
 
-// Admin: Extract PDF metadata on the fly
+// Admin: Automatically detect book author, category, ISBN, and metadata
+app.post(
+  '/api/admin/analyze-book',
+  requireAdminAuth,
+  upload.single('pdf'),
+  async (req: Request, res: Response) => {
+    try {
+      if (!req.file) {
+        res.status(400).json({ error: 'No PDF file uploaded for analysis' });
+        return;
+      }
+      const metadata = await analyzeBook(req.file.path, req.file.originalname);
+
+      // Clean up temporary analysis file
+      try {
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      } catch (e) {
+        console.warn('Could not clean up temporary analysis file:', e);
+      }
+
+      res.json(metadata);
+    } catch (err: any) {
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        try { fs.unlinkSync(req.file.path); } catch {}
+      }
+      console.error('Book analysis error:', err);
+      res.status(500).json({ error: err.message || 'Failed to analyze book' });
+    }
+  }
+);
+
+// Admin: Automatically generate or regenerate a short, accurate book description
+app.post(
+  '/api/admin/generate-description',
+  requireAdminAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const { bookId, title, author, categoryId } = req.body;
+      let pdfPath: string | undefined;
+      let categoryName: string | undefined;
+
+      if (bookId) {
+        const book = db.getBookById(bookId);
+        if (book) {
+          pdfPath = book.pdf_path;
+          categoryName = book.category_name;
+        }
+      }
+
+      if (!categoryName && categoryId) {
+        const cat = db.getCategoryById(categoryId);
+        if (cat) categoryName = cat.name;
+      }
+
+      const description = await generateBookDescription({
+        pdfPath,
+        title,
+        author,
+        categoryName
+      });
+
+      res.json({ description });
+    } catch (err: any) {
+      console.error('Error generating description:', err);
+      res.status(500).json({ error: err.message || 'Failed to generate description' });
+    }
+  }
+);
+
+// Admin: Extract PDF metadata on the fly (legacy lightweight endpoint)
 app.post(
   '/api/admin/extract-pdf-info',
   requireAdminAuth,
@@ -296,7 +458,6 @@ app.post(
         return;
       }
       const info = await extractPdfInfo(req.file.path);
-      // Clean up the temporary analyzed file
       try {
         fs.unlinkSync(req.file.path);
       } catch {}
@@ -316,33 +477,92 @@ app.post(
     { name: 'cover', maxCount: 1 }
   ]),
   async (req: Request, res: Response) => {
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] } | undefined;
+    const pdfFile = files?.pdf?.[0];
+    const coverFile = files?.cover?.[0];
+
+    // Cleanup helper if validation fails
+    const cleanupUploadedFiles = () => {
+      if (pdfFile?.path && fs.existsSync(pdfFile.path)) {
+        try { fs.unlinkSync(pdfFile.path); } catch (e) { console.warn('Could not clean up pdf:', e); }
+      }
+      if (coverFile?.path && fs.existsSync(coverFile.path)) {
+        try { fs.unlinkSync(coverFile.path); } catch (e) { console.warn('Could not clean up cover:', e); }
+      }
+    };
+
     try {
-      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-      const pdfFile = files?.pdf?.[0];
-      const coverFile = files?.cover?.[0];
+      if ((req as any).pdfValidationError) {
+        cleanupUploadedFiles();
+        res.status(400).json({ error: (req as any).pdfValidationError });
+        return;
+      }
+      if ((req as any).coverValidationError) {
+        cleanupUploadedFiles();
+        res.status(400).json({ error: (req as any).coverValidationError });
+        return;
+      }
 
       if (!pdfFile) {
         res.status(400).json({ error: 'A PDF file is required when adding a book.' });
         return;
       }
 
-      const { title, author, description, category_id, published } = req.body;
+      const {
+        title,
+        author,
+        description,
+        category_id,
+        published,
+        isbn,
+        publisher,
+        publication_year,
+        metadata_confidence,
+        allow_duplicate
+      } = req.body;
+
       if (!title || !title.trim()) {
-        // delete uploaded files to prevent orphaned files
-        try { fs.unlinkSync(pdfFile.path); } catch {}
-        if (coverFile) { try { fs.unlinkSync(coverFile.path); } catch {} }
+        cleanupUploadedFiles();
         res.status(400).json({ error: 'Book title is required.' });
         return;
       }
 
       if (!category_id) {
-        try { fs.unlinkSync(pdfFile.path); } catch {}
-        if (coverFile) { try { fs.unlinkSync(coverFile.path); } catch {} }
+        cleanupUploadedFiles();
         res.status(400).json({ error: 'Category selection is required.' });
         return;
       }
 
-      // Extract metadata from PDF if available
+      // Duplicate verification
+      if (allow_duplicate !== 'true' && allow_duplicate !== true) {
+        const dupCheck = db.checkDuplicate(title, author, isbn);
+        if (dupCheck.isDuplicate) {
+          cleanupUploadedFiles();
+          res.status(409).json({
+            error: `Possible duplicate book: ${dupCheck.reason}`,
+            isDuplicate: true,
+            reason: dupCheck.reason,
+            matchedBook: dupCheck.matchedBook
+          });
+          return;
+        }
+      }
+
+      // Verify category exists
+      let validCategoryId = category_id;
+      const categoryExists = db.getCategoryById(category_id);
+      if (!categoryExists) {
+        const allCategories = db.getCategories();
+        if (allCategories.length > 0) {
+          validCategoryId = allCategories[0].id;
+        } else {
+          cleanupUploadedFiles();
+          res.status(400).json({ error: 'No categories exist. Please create a category first.' });
+          return;
+        }
+      }
+
+      // Extract metadata from PDF safely
       const pdfMetadata = await extractPdfInfo(pdfFile.path);
 
       const pdfUrl = `/uploads/pdfs/${path.basename(pdfFile.path)}`;
@@ -353,22 +573,27 @@ app.post(
 
       const newBook = db.createBook({
         title: title.trim(),
-        author: author ? author.trim() : (pdfMetadata.author || 'Unknown Author'),
+        author: author && author.trim() ? author.trim() : (pdfMetadata.author || 'Unknown Author'),
         description: description ? description.trim() : '',
-        category_id,
+        category_id: validCategoryId,
         cover_url: coverUrl,
         cover_path: coverPath,
         pdf_url: pdfUrl,
         pdf_path: pdfFile.path,
         file_size: pdfMetadata.fileSize,
         page_count: pdfMetadata.pageCount,
+        isbn: isbn ? String(isbn).trim() : undefined,
+        publisher: publisher ? String(publisher).trim() : undefined,
+        publication_year: publication_year ? Number(publication_year) : undefined,
+        metadata_confidence: metadata_confidence,
         published: isPublished
       });
 
       res.status(201).json(newBook);
     } catch (err: any) {
-      console.error('Error creating book:', err);
-      res.status(500).json({ error: err.message || 'Failed to create book' });
+      cleanupUploadedFiles();
+      console.error('Error creating book record:', err);
+      res.status(500).json({ error: err.message || 'Failed to save book to repository.' });
     }
   }
 );
@@ -394,13 +619,27 @@ app.put(
       const newPdfFile = files?.pdf?.[0];
       const newCoverFile = files?.cover?.[0];
 
-      const { title, author, description, category_id, published } = req.body;
+      const {
+        title,
+        author,
+        description,
+        category_id,
+        published,
+        isbn,
+        publisher,
+        publication_year,
+        metadata_confidence
+      } = req.body;
 
       const updates: any = {};
       if (title !== undefined) updates.title = title;
       if (author !== undefined) updates.author = author;
       if (description !== undefined) updates.description = description;
       if (category_id !== undefined) updates.category_id = category_id;
+      if (isbn !== undefined) updates.isbn = isbn;
+      if (publisher !== undefined) updates.publisher = publisher;
+      if (publication_year !== undefined) updates.publication_year = publication_year;
+      if (metadata_confidence !== undefined) updates.metadata_confidence = metadata_confidence;
       if (published !== undefined) {
         updates.published = published === 'true' || published === true;
       }
@@ -491,9 +730,14 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Open Book Library running on http://localhost:${PORT}`);
   });
+
+  // Configure timeouts for large PDF uploads (up to 5 minutes)
+  server.timeout = 300000;
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
 }
 
 startServer().catch(err => {

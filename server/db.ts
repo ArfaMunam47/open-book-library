@@ -21,6 +21,10 @@ export interface Book {
   cover_path: string;
   file_size: number; // in bytes
   page_count: number;
+  isbn?: string;
+  publisher?: string;
+  publication_year?: number;
+  metadata_confidence?: 'High' | 'Medium' | 'Low';
   published: boolean;
   created_at: string;
   updated_at: string;
@@ -299,6 +303,10 @@ export class DatabaseService {
     pdf_path: string;
     file_size?: number;
     page_count?: number;
+    isbn?: string;
+    publisher?: string;
+    publication_year?: number;
+    metadata_confidence?: 'High' | 'Medium' | 'Low';
     published?: boolean;
   }): Book {
     this.init();
@@ -317,6 +325,10 @@ export class DatabaseService {
       pdf_path: data.pdf_path,
       file_size: data.file_size || 0,
       page_count: data.page_count || 1,
+      isbn: data.isbn ? data.isbn.trim() : undefined,
+      publisher: data.publisher ? data.publisher.trim() : undefined,
+      publication_year: data.publication_year ? Number(data.publication_year) : undefined,
+      metadata_confidence: data.metadata_confidence,
       published: data.published ?? true,
       created_at: now,
       updated_at: now
@@ -340,6 +352,10 @@ export class DatabaseService {
       pdf_path: string;
       file_size: number;
       page_count: number;
+      isbn: string;
+      publisher: string;
+      publication_year: number;
+      metadata_confidence: 'High' | 'Medium' | 'Low';
       published: boolean;
     }>
   ): Book {
@@ -356,12 +372,40 @@ export class DatabaseService {
       title: updates.title !== undefined ? updates.title.trim() : current.title,
       author: updates.author !== undefined ? updates.author.trim() : current.author,
       description: updates.description !== undefined ? updates.description.trim() : current.description,
+      isbn: updates.isbn !== undefined ? (updates.isbn ? updates.isbn.trim() : undefined) : current.isbn,
+      publisher: updates.publisher !== undefined ? (updates.publisher ? updates.publisher.trim() : undefined) : current.publisher,
+      publication_year: updates.publication_year !== undefined ? (updates.publication_year ? Number(updates.publication_year) : undefined) : current.publication_year,
       updated_at: new Date().toISOString()
     };
 
     this.db.books[index] = updatedBook;
     this.save();
     return updatedBook;
+  }
+
+  checkDuplicate(
+    title: string,
+    author?: string,
+    isbn?: string
+  ): { isDuplicate: boolean; matchedBook?: Book; reason?: string } {
+    this.init();
+    const cleanTitle = title.trim().toLowerCase();
+    const cleanAuthor = author ? author.trim().toLowerCase() : '';
+    const cleanIsbn = isbn ? isbn.replace(/[-\s]/g, '').toLowerCase() : '';
+
+    for (const b of this.db.books) {
+      if (cleanIsbn && b.isbn && b.isbn.replace(/[-\s]/g, '').toLowerCase() === cleanIsbn) {
+        return { isDuplicate: true, matchedBook: b, reason: `Matching ISBN: ${b.isbn}` };
+      }
+      const bTitle = b.title.trim().toLowerCase();
+      const bAuthor = b.author.trim().toLowerCase();
+      if (cleanTitle === bTitle) {
+        if (!cleanAuthor || !bAuthor || cleanAuthor.includes(bAuthor) || bAuthor.includes(cleanAuthor)) {
+          return { isDuplicate: true, matchedBook: b, reason: `Identical title "${b.title}" by "${b.author}"` };
+        }
+      }
+    }
+    return { isDuplicate: false };
   }
 
   setBookPublished(id: string, published: boolean): Book {

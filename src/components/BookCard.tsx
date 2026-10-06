@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { BookOpen, Download, FileText } from 'lucide-react';
+import { BookOpen, Download, FileText, Loader2 } from 'lucide-react';
 import { Book } from '../types/library';
-import { formatFileSize, getDownloadUrl } from '../lib/api';
+import { formatFileSize, downloadBookPdf } from '../lib/api';
 
 interface BookCardProps {
   book: Book;
@@ -17,6 +17,20 @@ export const BookCard: React.FC<BookCardProps> = ({
   onSelectCategory
 }) => {
   const [imageError, setImageError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setIsDownloading(true);
+      await downloadBookPdf(book.id, book.title);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('Could not download PDF. Please check connection and try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Generate pleasant palette based on book title length
   const hues = [
@@ -122,15 +136,19 @@ export const BookCard: React.FC<BookCardProps> = ({
             <span>Read Online</span>
           </button>
 
-          <a
-            href={getDownloadUrl(book.id)}
-            download
-            className="py-1.5 px-3 text-xs font-medium text-white bg-stone-900 hover:bg-amber-950 rounded transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+          <button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            className="py-1.5 px-3 text-xs font-medium text-white bg-stone-900 hover:bg-amber-950 rounded transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap disabled:opacity-60 cursor-pointer"
             title="Download actual PDF file"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Download</span>
-          </a>
+            {isDownloading ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5" />
+            )}
+            <span>{isDownloading ? 'Saving...' : 'Download'}</span>
+          </button>
         </div>
       </div>
     </article>

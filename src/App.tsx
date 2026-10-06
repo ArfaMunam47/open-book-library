@@ -93,6 +93,19 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  const handleRefreshBooks = useCallback(async () => {
+    try {
+      const [booksData, categoriesData] = await Promise.all([
+        fetchBooks(),
+        fetchCategories()
+      ]);
+      setBooks(booksData);
+      setCategories(categoriesData);
+    } catch (err) {
+      console.error('Error refreshing books from database:', err);
+    }
+  }, []);
+
   const navigateTo = (view: ActiveView) => {
     setCurrentView(view);
     // Update hash for back/forward support
@@ -112,8 +125,19 @@ export default function App() {
     } else if (view.type === 'admin-login') {
       window.location.hash = '/admin/login';
     }
+    // Always re-fetch books from database when navigating so public and admin views are in sync
+    handleRefreshBooks();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Re-sync books automatically when the browser tab gains focus
+  useEffect(() => {
+    const handleFocus = () => {
+      handleRefreshBooks();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [handleRefreshBooks]);
 
   const handleAdminLogout = async () => {
     await adminLogout();
@@ -125,6 +149,7 @@ export default function App() {
   const handleAdminLoginSuccess = () => {
     setIsAdmin(true);
     showToast('Successfully authenticated as librarian administrator.');
+    handleRefreshBooks();
     navigateTo({ type: 'admin', subview: 'books' });
   };
 
@@ -134,19 +159,6 @@ export default function App() {
       setCategories(updated);
     } catch (err) {
       console.error('Error refreshing categories:', err);
-    }
-  };
-
-  const handleRefreshBooks = async () => {
-    try {
-      const [booksData, categoriesData] = await Promise.all([
-        fetchBooks(),
-        fetchCategories()
-      ]);
-      setBooks(booksData);
-      setCategories(categoriesData);
-    } catch (err) {
-      console.error('Error refreshing books:', err);
     }
   };
 
@@ -298,28 +310,37 @@ export default function App() {
               ) : currentView.subview === 'new-book' ? (
                 <BookForm
                   categories={categories}
+                  onBookCreated={handleRefreshBooks}
                   onSuccess={(newBook) => {
                     handleRefreshBooks();
                     showToast(`Book "${newBook.title}" successfully added!`);
                     navigateTo({ type: 'admin', subview: 'books' });
                   }}
-                  onCancel={() => navigateTo({ type: 'admin', subview: 'books' })}
+                  onCancel={() => {
+                    handleRefreshBooks();
+                    navigateTo({ type: 'admin', subview: 'books' });
+                  }}
                 />
               ) : currentView.subview === 'edit-book' ? (
                 <BookForm
                   categories={categories}
                   initialBook={currentActiveBook}
+                  onBookCreated={handleRefreshBooks}
                   onSuccess={(updatedBook) => {
                     handleRefreshBooks();
                     showToast(`Book "${updatedBook.title}" updated successfully!`);
                     navigateTo({ type: 'admin', subview: 'books' });
                   }}
-                  onCancel={() => navigateTo({ type: 'admin', subview: 'books' })}
+                  onCancel={() => {
+                    handleRefreshBooks();
+                    navigateTo({ type: 'admin', subview: 'books' });
+                  }}
                 />
               ) : (
                 <AdminDashboard
                   categories={categories}
                   onRefreshCategories={handleRefreshCategories}
+                  onRefreshBooks={handleRefreshBooks}
                   onAddNewBook={() => navigateTo({ type: 'admin', subview: 'new-book' })}
                   onEditBook={(book) => navigateTo({ type: 'admin', subview: 'edit-book', editingBookId: book.id })}
                   onViewBookPublic={(bookId) => navigateTo({ type: 'book-details', bookId })}

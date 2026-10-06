@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, BookOpen, Download, FileText, Calendar, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, BookOpen, Download, FileText, Calendar, CheckCircle2, ShieldCheck, Loader2 } from 'lucide-react';
 import { Book } from '../types/library';
-import { formatFileSize, formatDate, getDownloadUrl } from '../lib/api';
+import { formatFileSize, formatDate, downloadBookPdf } from '../lib/api';
 
 interface BookDetailsProps {
   book: Book;
@@ -17,6 +17,19 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
   onSelectCategory
 }) => {
   const [imageError, setImageError] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      setIsDownloading(true);
+      await downloadBookPdf(book.id, book.title);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert('Could not download PDF. Please check connection and try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Update document title for SEO
   useEffect(() => {
@@ -87,14 +100,23 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
                 <span>Read Online in Browser</span>
               </button>
 
-              <a
-                href={getDownloadUrl(book.id)}
-                download
-                className="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2"
+              <button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="w-full py-2.5 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
-                <Download className="w-4 h-4 text-stone-600" />
-                <span>Download PDF ({formatFileSize(book.file_size)})</span>
-              </a>
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin text-stone-600" />
+                    <span>Downloading PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 text-stone-600" />
+                    <span>Download PDF ({formatFileSize(book.file_size)})</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
 
@@ -135,9 +157,25 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
                   <span className="font-mono text-stone-800 mt-0.5 block tabular-nums">{book.page_count} pages</span>
                 </div>
                 <div>
-                  <span className="text-stone-400 block uppercase tracking-wider text-[10px]">Catalog Date</span>
-                  <span className="text-stone-800 mt-0.5 block">{formatDate(book.created_at)}</span>
+                  <span className="text-stone-400 block uppercase tracking-wider text-[10px]">
+                    {book.publication_year ? 'Publication Year' : 'Catalog Date'}
+                  </span>
+                  <span className="text-stone-800 mt-0.5 block font-mono">
+                    {book.publication_year || formatDate(book.created_at)}
+                  </span>
                 </div>
+                {book.isbn && (
+                  <div className="col-span-2 sm:col-span-2 pt-2 border-t border-stone-100">
+                    <span className="text-stone-400 block uppercase tracking-wider text-[10px]">ISBN</span>
+                    <span className="font-mono text-stone-800 mt-0.5 block">{book.isbn}</span>
+                  </div>
+                )}
+                {book.publisher && (
+                  <div className="col-span-2 sm:col-span-2 pt-2 border-t border-stone-100">
+                    <span className="text-stone-400 block uppercase tracking-wider text-[10px]">Publisher</span>
+                    <span className="font-medium text-stone-800 mt-0.5 block truncate">{book.publisher}</span>
+                  </div>
+                )}
               </div>
 
               {/* Description */}

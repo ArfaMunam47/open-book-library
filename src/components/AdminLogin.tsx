@@ -78,8 +78,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
               />
               <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
             </div>
-            <p className="text-[11px] text-stone-400 mt-1.5">
-              Default password for testing: <span className="font-mono text-stone-700 bg-stone-100 px-1 py-0.5 rounded">admin123</span>
+            <p className="text-[11px] text-stone-500 mt-1.5">
+              Enter your administrator password (configured via <span className="font-mono text-stone-700 bg-stone-100 px-1 py-0.5 rounded">ADMIN_PASSWORD</span> or default <span className="font-mono text-stone-700 bg-stone-100 px-1 py-0.5 rounded">admin123</span>).
             </p>
           </div>
 

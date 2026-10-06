@@ -30,6 +30,7 @@ import { CategoryManager } from './CategoryManager';
 interface AdminDashboardProps {
   categories: Category[];
   onRefreshCategories: () => Promise<void>;
+  onRefreshBooks: () => Promise<void>;
   onAddNewBook: () => void;
   onEditBook: (book: Book) => void;
   onViewBookPublic: (bookId: string) => void;
@@ -38,6 +39,7 @@ interface AdminDashboardProps {
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   categories,
   onRefreshCategories,
+  onRefreshBooks,
   onAddNewBook,
   onEditBook,
   onViewBookPublic
@@ -82,7 +84,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const updated = await toggleBookPublish(book.id, !book.published);
       setBooks(prev => prev.map(b => (b.id === book.id ? updated : b)));
       setStatusMessage(`Book "${book.title}" is now ${updated.published ? 'Published' : 'Unpublished'}.`);
-      // Update stats
+      // Update global application state so public website syncs immediately
+      await onRefreshBooks();
       fetchAdminStats().then(setStats);
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {
@@ -98,6 +101,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setBooks(prev => prev.filter(b => b.id !== bookToDelete.id));
       setStatusMessage(`Book "${bookToDelete.title}" and its PDF file have been deleted.`);
       setBookToDelete(null);
+      // Immediately refresh global books so public website reflects deletion
+      await onRefreshBooks();
       fetchAdminStats().then(setStats);
       setTimeout(() => setStatusMessage(null), 3000);
     } catch (err: any) {

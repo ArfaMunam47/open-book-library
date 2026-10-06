@@ -20,9 +20,31 @@ export interface Book {
   cover_path?: string;
   file_size: number;
   page_count: number;
+  isbn?: string;
+  publisher?: string;
+  publication_year?: number;
+  metadata_confidence?: 'High' | 'Medium' | 'Low';
   published: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface DetectedBookMetadata {
+  title: string;
+  author: string;
+  categoryId: string;
+  categoryName: string;
+  suggestedCategory?: string | null;
+  isbn?: string | null;
+  publisher?: string | null;
+  publicationYear?: number | null;
+  description?: string;
+  confidence: 'High' | 'Medium' | 'Low';
+  reasoning?: string;
+  pageCount: number;
+  fileSize: number;
+  isDuplicate?: boolean;
+  duplicateReason?: string;
 }
 
 export interface AdminStats {
