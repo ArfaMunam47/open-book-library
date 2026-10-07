@@ -92,13 +92,15 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
 
             {/* Quick Action Buttons on Mobile / Left Column */}
             <div className="w-full max-w-sm mt-6 flex flex-col gap-2.5">
-              <button
-                onClick={() => onReadOnline(book.id)}
-                className="w-full py-3 px-4 bg-stone-900 hover:bg-amber-950 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm"
+              <a
+                href={`/api/pdf/${book.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3 px-4 bg-stone-900 hover:bg-amber-950 text-white rounded-lg font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm text-center"
               >
                 <BookOpen className="w-4 h-4 text-amber-300" />
-                <span>Read Online in Browser</span>
-              </button>
+                <span>Read Online in New Tab</span>
+              </a>
 
               <button
                 onClick={handleDownload}

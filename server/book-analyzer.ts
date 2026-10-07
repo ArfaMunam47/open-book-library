@@ -53,7 +53,12 @@ async function extractBibliographicPages(filePath: string, maxPages: number = 10
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const uint8 = new Uint8Array(buffer);
-    const doc = await pdfjsLib.getDocument({ data: uint8 }).promise;
+    const standardFontPath = path.resolve(process.cwd(), 'node_modules/pdfjs-dist/standard_fonts') + '/';
+    const doc = await pdfjsLib.getDocument({
+      data: uint8,
+      standardFontDataUrl: standardFontPath,
+      useSystemFonts: true
+    }).promise;
     pageCount = doc.numPages;
 
     const pagesToRead = Math.min(doc.numPages, maxPages);
@@ -208,6 +213,48 @@ function heuristicExtraction(
 }
 
 /**
+ * Executes a Gemini request with automatic retry for transient 503/429 errors,
+ * 15-second timeout, and seamless fallback between models.
+ */
+async function executeGeminiWithRetry<T>(
+  action: (ai: GoogleGenAI, model: string) => Promise<T>,
+  models: string[] = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'],
+  timeoutMs: number = 15000
+): Promise<T | null> {
+  if (!process.env.GEMINI_API_KEY) return null;
+  const ai = new GoogleGenAI();
+
+  for (const model of models) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        const actionPromise = action(ai, model);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms with ${model}`)), timeoutMs)
+        );
+
+        const result = await Promise.race([actionPromise, timeoutPromise]);
+        if (result) return result;
+      } catch (err: any) {
+        const errMsg = String(err?.message || err || '');
+        const status = err?.status || (errMsg.includes('503') ? 503 : (errMsg.includes('429') ? 429 : null));
+        const isTransient = status === 503 || status === 429 || errMsg.includes('Timeout') || errMsg.includes('overloaded');
+
+        if (isTransient && attempt === 1) {
+          // Brief pause before retry on transient network or capacity blip
+          await new Promise(r => setTimeout(r, 800));
+          continue;
+        }
+
+        // Move to the next model fallback
+        break;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Primary analysis entrypoint: extracts pages, queries Gemini with automatic model failover,
  * and falls back to deterministic heuristic extraction if API is unavailable.
  */
@@ -275,52 +322,40 @@ Return strictly JSON matching this structure:
   "reasoning": "string"
 }`;
 
-    // Try gemini-3.1-flash-lite first for lightning fast metadata extraction, failover to gemini-3.8-flash
-    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.8-flash'];
-    const ai = new GoogleGenAI();
-
-    for (const model of modelsToTry) {
-      try {
-        const generatePromise = ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: {
-            responseMimeType: 'application/json',
-            temperature: 0.1
-          }
-        });
-
-        // 6 second timeout per model attempt
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Timeout with ${model}`)), 6000)
-        );
-
-        const response: any = await Promise.race([generatePromise, timeoutPromise]);
-
-        if (response && response.text) {
-          const parsed = JSON.parse(response.text);
-          if (parsed.title && parsed.author) {
-            // Validate categoryId exists in DB
-            const matchedCat = categories.find(c => c.id === parsed.categoryId) || categories[0];
-            detected = {
-              title: String(parsed.title).trim(),
-              author: String(parsed.author).trim(),
-              categoryId: matchedCat ? matchedCat.id : categories[0].id,
-              categoryName: matchedCat ? matchedCat.name : categories[0].name,
-              suggestedCategory: parsed.suggestedCategory || null,
-              isbn: parsed.isbn ? String(parsed.isbn).trim() : null,
-              publisher: parsed.publisher ? String(parsed.publisher).trim() : null,
-              publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : null,
-              description: parsed.description ? String(parsed.description).trim() : undefined,
-              confidence: (['High', 'Medium', 'Low'].includes(parsed.confidence) ? parsed.confidence : 'Medium') as any,
-              reasoning: parsed.reasoning || `Detected using ${model}`
-            };
-            break;
-          }
+    const parsedResult = await executeGeminiWithRetry(async (ai, model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.1
         }
-      } catch (err: any) {
-        console.warn(`Model ${model} extraction failed or timed out:`, err.status || err.message);
+      });
+      if (response && response.text) {
+        const parsed = JSON.parse(response.text);
+        if (parsed.title && parsed.author) {
+          return { parsed, model };
+        }
       }
+      return null;
+    });
+
+    if (parsedResult) {
+      const { parsed, model } = parsedResult;
+      const matchedCat = categories.find(c => c.id === parsed.categoryId) || categories[0];
+      detected = {
+        title: String(parsed.title).trim(),
+        author: String(parsed.author).trim(),
+        categoryId: matchedCat ? matchedCat.id : categories[0].id,
+        categoryName: matchedCat ? matchedCat.name : categories[0].name,
+        suggestedCategory: parsed.suggestedCategory || null,
+        isbn: parsed.isbn ? String(parsed.isbn).trim() : null,
+        publisher: parsed.publisher ? String(parsed.publisher).trim() : null,
+        publicationYear: parsed.publicationYear ? Number(parsed.publicationYear) : null,
+        description: parsed.description ? String(parsed.description).trim() : undefined,
+        confidence: (['High', 'Medium', 'Low'].includes(parsed.confidence) ? parsed.confidence : 'Medium') as any,
+        reasoning: parsed.reasoning || `Detected using ${model}`
+      };
     }
   }
 
@@ -342,8 +377,8 @@ Return strictly JSON matching this structure:
       if (generated && generated.trim().length > 20) {
         detected.description = generated.trim();
       }
-    } catch (e) {
-      console.warn('Dedicated description generation note:', e);
+    } catch {
+      // Gracefully continue without description
     }
   }
 
@@ -393,21 +428,20 @@ Guidelines:
 5. Target approximately 50 to 90 words.`;
 
   if (process.env.GEMINI_API_KEY) {
-    const ai = new GoogleGenAI();
-    const modelsToTry = ['gemini-3.1-flash-lite', 'gemini-3.8-flash'];
-    for (const model of modelsToTry) {
-      try {
-        const res = await ai.models.generateContent({
-          model,
-          contents: prompt,
-          config: { temperature: 0.2 }
-        });
-        if (res.text && res.text.trim().length > 20) {
-          return res.text.trim();
-        }
-      } catch (err) {
-        console.warn(`Description generation with ${model} failed, trying next:`, err);
+    const generated = await executeGeminiWithRetry(async (ai, model) => {
+      const res = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: { temperature: 0.2 }
+      });
+      if (res.text && res.text.trim().length > 20) {
+        return res.text.trim();
       }
+      return null;
+    });
+
+    if (generated) {
+      return generated;
     }
   }
 

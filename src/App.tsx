@@ -224,7 +224,7 @@ export default function App() {
                 books={books}
                 categories={categories}
                 onOpenBook={(bookId) => navigateTo({ type: 'book-details', bookId })}
-                onReadOnline={(bookId) => navigateTo({ type: 'pdf-reader', bookId })}
+                onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
                 onSelectCategory={(categoryId) => navigateTo({ type: 'books', categoryId })}
                 onNavigateBooks={(searchQuery) => navigateTo({ type: 'books', search: searchQuery })}
                 onNavigateCategories={() => navigateTo({ type: 'categories' })}
@@ -239,7 +239,7 @@ export default function App() {
                 initialSearch={currentView.search || ''}
                 initialCategory={currentView.categoryId || 'all'}
                 onOpenBook={(bookId) => navigateTo({ type: 'book-details', bookId })}
-                onReadOnline={(bookId) => navigateTo({ type: 'pdf-reader', bookId })}
+                onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
                 onSelectCategory={(categoryId) => navigateTo({ type: 'books', categoryId })}
               />
             )}
@@ -255,7 +255,7 @@ export default function App() {
                   }
                 }}
                 onOpenBook={(bookId) => navigateTo({ type: 'book-details', bookId })}
-                onReadOnline={(bookId) => navigateTo({ type: 'pdf-reader', bookId })}
+                onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
               />
             )}
 
@@ -265,7 +265,7 @@ export default function App() {
                 <BookDetails
                   book={currentActiveBook}
                   onBack={() => navigateTo({ type: 'books' })}
-                  onReadOnline={(bookId) => navigateTo({ type: 'pdf-reader', bookId })}
+                  onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
                   onSelectCategory={(categoryId) => navigateTo({ type: 'books', categoryId })}
                 />
               ) : (

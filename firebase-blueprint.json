@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "Category": {
+      "title": "Category",
+      "description": "Library category for grouping books",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "description": { "type": "string" },
+        "created_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "slug"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "Book publication record in the library",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "description": { "type": "string" },
+        "category_id": { "type": "string" },
+        "cover_url": { "type": "string" },
+        "pdf_url": { "type": "string" },
+        "file_size": { "type": "number" },
+        "page_count": { "type": "number" },
+        "isbn": { "type": "string" },
+        "publisher": { "type": "string" },
+        "publication_year": { "type": "number" },
+        "metadata_confidence": { "type": "string", "enum": ["High", "Medium", "Low"] },
+        "published": { "type": "boolean" },
+        "created_at": { "type": "string", "format": "date-time" },
+        "updated_at": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "author", "category_id", "published"]
+    },
+    "FileChunk": {
+      "title": "FileChunk",
+      "description": "Persistent chunk for large PDFs or covers",
+      "type": "object",
+      "properties": {
+        "chunkIndex": { "type": "number" },
+        "totalChunks": { "type": "number" },
+        "mimeType": { "type": "string" },
+        "data": { "type": "string" }
+      },
+      "required": ["chunkIndex", "data"]
+    }
+  },
+  "firestore": {
+    "/categories/{categoryId}": {
+      "schema": { "$ref": "#/entities/Category" },
+      "description": "Collection of all book categories"
+    },
+    "/books/{bookId}": {
+      "schema": { "$ref": "#/entities/Book" },
+      "description": "Collection of all library books"
+    },
+    "/books/{bookId}/pdf_chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/FileChunk" },
+      "description": "Persistent file chunks for book PDF data"
+    },
+    "/books/{bookId}/cover_chunks/{chunkId}": {
+      "schema": { "$ref": "#/entities/FileChunk" },
+      "description": "Persistent file chunks for book cover images"
+    }
+  }
+}

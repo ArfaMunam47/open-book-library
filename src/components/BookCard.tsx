@@ -127,14 +127,17 @@ export const BookCard: React.FC<BookCardProps> = ({
 
         {/* Action Buttons: Read & Download */}
         <div className="pt-3 border-t border-stone-100 flex items-center gap-2 mt-auto">
-          <button
-            onClick={() => onReadOnline(book.id)}
+          <a
+            href={`/api/pdf/${book.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="flex-1 py-1.5 px-3 text-xs font-medium text-stone-900 bg-stone-100 hover:bg-stone-200 rounded transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
-            title="Read book online in browser"
+            title="Read book online in new tab"
           >
             <BookOpen className="w-3.5 h-3.5 text-amber-900" />
             <span>Read Online</span>
-          </button>
+          </a>
 
           <button
             onClick={handleDownload}

@@ -120,6 +120,48 @@ app.use('/api', (req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
+// Intercept and re-hydrate missing uploads from persistent Cloud Firestore chunks if container restarted
+app.get('/uploads/covers/:filename', async (req: Request, res: Response, next: NextFunction) => {
+  const localFile = path.join(coversDir, req.params.filename);
+  if (fs.existsSync(localFile)) {
+    return next();
+  }
+  const allBooks = db.getBooks();
+  const book = allBooks.find(b => b.cover_url?.includes(req.params.filename) || b.cover_path?.includes(req.params.filename));
+  if (book) {
+    const buffer = await db.getCoverBuffer(book.id);
+    if (buffer) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Content-Type', req.params.filename.endsWith('.png') ? 'image/png' : 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+      return res.send(buffer);
+    }
+  }
+  next();
+});
+
+app.get('/uploads/pdfs/:filename', async (req: Request, res: Response, next: NextFunction) => {
+  const localFile = path.join(pdfsDir, req.params.filename);
+  if (fs.existsSync(localFile)) {
+    return next();
+  }
+  const allBooks = db.getBooks();
+  const book = allBooks.find(b => b.pdf_url?.includes(req.params.filename) || b.pdf_path?.includes(req.params.filename));
+  if (book) {
+    const buffer = await db.getPdfBuffer(book.id);
+    if (buffer) {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'inline');
+      res.setHeader('Content-Length', String(buffer.length));
+      return res.send(buffer);
+    }
+  }
+  next();
+});
+
 // Serve static uploads with cross-origin headers to prevent iframe subresource blocking
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
@@ -199,14 +241,14 @@ app.get('/api/categories', (req: Request, res: Response) => {
 });
 
 // Admin: Create category
-app.post('/api/admin/categories', requireAdminAuth, (req: Request, res: Response) => {
+app.post('/api/admin/categories', requireAdminAuth, async (req: Request, res: Response) => {
   try {
     const { name, description } = req.body;
     if (!name || !name.trim()) {
       res.status(400).json({ error: 'Category name is required' });
       return;
     }
-    const newCategory = db.createCategory(name, description);
+    const newCategory = await db.createCategory(name, description);
     res.status(201).json(newCategory);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to create category' });
@@ -214,7 +256,7 @@ app.post('/api/admin/categories', requireAdminAuth, (req: Request, res: Response
 });
 
 // Admin: Update category
-app.put('/api/admin/categories/:id', requireAdminAuth, (req: Request, res: Response) => {
+app.put('/api/admin/categories/:id', requireAdminAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description } = req.body;
@@ -222,7 +264,7 @@ app.put('/api/admin/categories/:id', requireAdminAuth, (req: Request, res: Respo
       res.status(400).json({ error: 'Category name is required' });
       return;
     }
-    const updated = db.updateCategory(id, name, description || '');
+    const updated = await db.updateCategory(id, name, description || '');
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to update category' });
@@ -230,10 +272,10 @@ app.put('/api/admin/categories/:id', requireAdminAuth, (req: Request, res: Respo
 });
 
 // Admin: Delete category
-app.delete('/api/admin/categories/:id', requireAdminAuth, (req: Request, res: Response) => {
+app.delete('/api/admin/categories/:id', requireAdminAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = db.deleteCategory(id);
+    const result = await db.deleteCategory(id);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to delete category' });
@@ -276,7 +318,7 @@ app.get('/api/books/:id', (req: Request, res: Response) => {
 });
 
 // Public: Download book PDF directly
-app.get('/api/download/:id', (req: Request, res: Response) => {
+app.get('/api/download/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const book = db.getBookById(id);
@@ -295,7 +337,8 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
       }
     }
 
-    if (!book.pdf_path || !fs.existsSync(book.pdf_path)) {
+    const pdfBuffer = await db.getPdfBuffer(id);
+    if (!pdfBuffer) {
       res.status(404).json({ error: 'PDF file not found in storage' });
       return;
     }
@@ -303,8 +346,9 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
     const cleanFilename = `${slugify(book.title || 'book')}.pdf`;
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${cleanFilename}"`);
+    res.setHeader('Content-Length', String(pdfBuffer.length));
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Range');
-    res.sendFile(path.resolve(book.pdf_path));
+    res.send(pdfBuffer);
   } catch (err: any) {
     console.error('Error serving download:', err);
     res.status(500).json({ error: 'Server error downloading book' });
@@ -312,7 +356,7 @@ app.get('/api/download/:id', (req: Request, res: Response) => {
 });
 
 // Public: Stream / view book PDF inline
-app.get('/api/pdf/:id', (req: Request, res: Response) => {
+app.get('/api/pdf/:id', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const book = db.getBookById(id);
@@ -330,20 +374,78 @@ app.get('/api/pdf/:id', (req: Request, res: Response) => {
       }
     }
 
-    if (!book.pdf_path || !fs.existsSync(book.pdf_path)) {
+    const pdfBuffer = await db.getPdfBuffer(id);
+    if (!pdfBuffer) {
       res.status(404).json({ error: 'PDF file not found in storage' });
       return;
     }
 
     const cleanFilename = `${slugify(book.title || 'book')}.pdf`;
+
+    // Support HTTP Range requests (crucial for browser PDF viewer seeking and large files)
+    const rangeHeader = req.headers.range;
+    if (rangeHeader) {
+      const match = rangeHeader.match(/bytes=(\d*)-(\d*)/);
+      if (match) {
+        const start = match[1] ? parseInt(match[1], 10) : 0;
+        const end = match[2] ? parseInt(match[2], 10) : pdfBuffer.length - 1;
+        if (start < pdfBuffer.length && end >= start) {
+          const clampedEnd = Math.min(end, pdfBuffer.length - 1);
+          const chunkSize = (clampedEnd - start) + 1;
+          const slice = pdfBuffer.subarray(start, clampedEnd + 1);
+
+          res.writeHead(206, {
+            'Content-Range': `bytes ${start}-${clampedEnd}/${pdfBuffer.length}`,
+            'Accept-Ranges': 'bytes',
+            'Content-Length': String(chunkSize),
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="${cleanFilename}"`,
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Expose-Headers': 'Content-Disposition, Content-Length, Content-Range'
+          });
+          res.end(slice);
+          return;
+        }
+      }
+    }
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `inline; filename="${cleanFilename}"`);
+    res.setHeader('Content-Length', String(pdfBuffer.length));
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition, Content-Length, Content-Range');
-    res.sendFile(path.resolve(book.pdf_path));
+    res.send(pdfBuffer);
   } catch (err: any) {
     console.error('Error streaming PDF:', err);
     res.status(500).json({ error: 'Server error streaming PDF' });
+  }
+});
+
+// Public: Serve cover image directly by book ID with persistent fallback
+app.get('/api/cover/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const book = db.getBookById(id);
+    if (!book) {
+      res.status(404).json({ error: 'Book not found' });
+      return;
+    }
+
+    const coverBuffer = await db.getCoverBuffer(id);
+    if (!coverBuffer) {
+      res.status(404).json({ error: 'Cover image not found in storage' });
+      return;
+    }
+
+    const isPng = book.cover_url?.toLowerCase().endsWith('.png') || book.cover_path?.toLowerCase().endsWith('.png');
+    res.setHeader('Content-Type', isPng ? 'image/png' : 'image/jpeg');
+    res.setHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.send(coverBuffer);
+  } catch (err: any) {
+    console.error('Error streaming cover:', err);
+    res.status(500).json({ error: 'Server error streaming cover' });
   }
 });
 
@@ -571,7 +673,10 @@ app.post(
 
       const isPublished = published === 'false' || published === false ? false : true;
 
-      const newBook = db.createBook({
+      const pdfBuffer = fs.readFileSync(pdfFile.path);
+      const coverBuffer = coverFile && fs.existsSync(coverFile.path) ? fs.readFileSync(coverFile.path) : undefined;
+
+      const newBook = await db.createBook({
         title: title.trim(),
         author: author && author.trim() ? author.trim() : (pdfMetadata.author || 'Unknown Author'),
         description: description ? description.trim() : '',
@@ -587,7 +692,7 @@ app.post(
         publication_year: publication_year ? Number(publication_year) : undefined,
         metadata_confidence: metadata_confidence,
         published: isPublished
-      });
+      }, pdfBuffer, coverBuffer, pdfFile.originalname, coverFile?.originalname);
 
       res.status(201).json(newBook);
     } catch (err: any) {
@@ -644,8 +749,12 @@ app.put(
         updates.published = published === 'true' || published === true;
       }
 
+      let newPdfBuffer: Buffer | undefined;
+      let newCoverBuffer: Buffer | undefined;
+
       // If replacement PDF uploaded
       if (newPdfFile) {
+        newPdfBuffer = fs.readFileSync(newPdfFile.path);
         const metadata = await extractPdfInfo(newPdfFile.path);
         // Remove old PDF safely
         if (currentBook.pdf_path && fs.existsSync(currentBook.pdf_path)) {
@@ -659,6 +768,7 @@ app.put(
 
       // If replacement cover uploaded
       if (newCoverFile) {
+        newCoverBuffer = fs.readFileSync(newCoverFile.path);
         // Remove old cover if exists
         if (currentBook.cover_path && fs.existsSync(currentBook.cover_path)) {
           try { fs.unlinkSync(currentBook.cover_path); } catch {}
@@ -667,7 +777,7 @@ app.put(
         updates.cover_path = newCoverFile.path;
       }
 
-      const updated = db.updateBook(id, updates);
+      const updated = await db.updateBook(id, updates, newPdfBuffer, newCoverBuffer);
       res.json(updated);
     } catch (err: any) {
       console.error('Error updating book:', err);
@@ -677,11 +787,11 @@ app.put(
 );
 
 // Admin: Toggle publish status
-app.patch('/api/admin/books/:id/publish', requireAdminAuth, (req: Request, res: Response) => {
+app.patch('/api/admin/books/:id/publish', requireAdminAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { published } = req.body;
-    const updated = db.setBookPublished(id, Boolean(published));
+    const updated = await db.setBookPublished(id, Boolean(published));
     res.json(updated);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to change publish status' });
@@ -689,10 +799,10 @@ app.patch('/api/admin/books/:id/publish', requireAdminAuth, (req: Request, res: 
 });
 
 // Admin: Delete book
-app.delete('/api/admin/books/:id', requireAdminAuth, (req: Request, res: Response) => {
+app.delete('/api/admin/books/:id', requireAdminAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const result = db.deleteBook(id);
+    const result = await db.deleteBook(id);
     res.json(result);
   } catch (err: any) {
     res.status(400).json({ error: err.message || 'Failed to delete book' });
@@ -715,6 +825,8 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 // ==========================================
 
 async function startServer() {
+  await db.ready();
+
   if (!isProd) {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({

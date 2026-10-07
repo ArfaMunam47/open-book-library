@@ -61,6 +61,7 @@ export const PDFReader: React.FC<PDFReaderProps> = ({ book, onClose }) => {
         data: arrayBuffer,
         cMapUrl: 'https://unpkg.com/pdfjs-dist@4.10.38/cmaps/',
         cMapPacked: true,
+        standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.10.38/standard_fonts/',
       });
 
       const doc = await loadingTask.promise;
