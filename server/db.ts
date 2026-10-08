@@ -270,7 +270,7 @@ export class DatabaseService {
   private async migrateLocalDataToFirestore() {
     if (!this.firestore) return;
 
-    // Check existing 4 books
+    // Check existing books in DB_FILE to ensure local cache is synced
     if (fs.existsSync(DB_FILE)) {
       try {
         const raw = fs.readFileSync(DB_FILE, 'utf-8');
@@ -281,7 +281,7 @@ export class DatabaseService {
           const existing = this.books.find(b => b.id === localBook.id);
           if (!existing) {
             console.log(`Migrating book "${localBook.title}" (${localBook.id}) to persistent Cloud Firestore...`);
-            await setDoc(doc(this.firestore, 'books', localBook.id), localBook);
+            await setDoc(doc(this.firestore, 'books', localBook.id), cleanForFirestore(localBook));
             this.books.unshift(localBook);
           }
 
@@ -297,48 +297,6 @@ export class DatabaseService {
       } catch (err) {
         console.warn('Migration note:', err);
       }
-    }
-
-    // Check orphan PDFs in uploads/
-    await this.preserveOrphanFiles();
-  }
-
-  private async preserveOrphanFiles() {
-    if (!this.firestore) return;
-    try {
-      const atomicHabitsPdf = path.join(PDFS_DIR, 'Atomic_Habits_Clear_James_2026_1791210127412_gmkb4n.pdf');
-      if (fs.existsSync(atomicHabitsPdf) && !this.books.some(b => b.title.includes('Atomic Habits'))) {
-        const stats = fs.statSync(atomicHabitsPdf);
-        const bookId = 'book-atomic-habits-permanent';
-        const now = new Date().toISOString();
-        const book: Book = {
-          id: bookId,
-          title: 'Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones',
-          author: 'James Clear',
-          description: 'A transformative guide on how tiny daily changes and incremental 1% improvements accumulate into remarkable results. James Clear provides practical, actionable strategies for habit formation, overcoming lack of motivation, and reshaping personal identity.',
-          category_id: 'cat-3',
-          cover_url: '',
-          cover_path: '',
-          pdf_url: `/api/pdf/${bookId}`,
-          pdf_path: atomicHabitsPdf,
-          file_size: stats.size,
-          page_count: 80,
-          isbn: '9780735211292',
-          publisher: 'Avery',
-          publication_year: 2018,
-          metadata_confidence: 'High',
-          published: true,
-          created_at: now,
-          updated_at: now
-        };
-
-        await this.persistFileToChunks(bookId, 'pdf_chunks', atomicHabitsPdf);
-        await setDoc(doc(this.firestore, 'books', bookId), book);
-        this.books.unshift(book);
-        console.log('Preserved orphan Atomic Habits book into persistent Cloud Firestore.');
-      }
-    } catch (e) {
-      console.warn('Orphan preservation note:', e);
     }
   }
 

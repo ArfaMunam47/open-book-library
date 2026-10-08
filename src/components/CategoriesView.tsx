@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FolderTree, BookOpen, ArrowRight, ArrowLeft } from 'lucide-react';
+import React from 'react';
+import { BookOpen, ArrowRight, ArrowLeft, Bookmark, FolderTree, Sparkles } from 'lucide-react';
 import { Book, Category } from '../types/library';
 import { BookCard } from './BookCard';
 
@@ -27,21 +27,25 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     const categoryBooks = books.filter(b => b.category_id === currentCategory.id);
 
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
         {/* Back to all categories */}
         <button
           onClick={() => onSelectCategory(undefined)}
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-stone-900 transition-colors mb-6 group"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600 hover:text-stone-900 transition-colors group cursor-pointer"
         >
           <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
           <span>All Subject Categories</span>
         </button>
 
-        <div className="mb-8 pb-6 border-b border-stone-200">
-          <div className="text-xs uppercase tracking-widest text-amber-900 font-semibold mb-1">
-            Subject Collection
+        {/* Category Header */}
+        <div className="pb-6 border-b border-stone-200">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="w-2 h-2 rounded-full bg-amber-900" />
+            <span className="text-xs uppercase tracking-widest text-amber-950 font-bold">
+              Subject Collection
+            </span>
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900">
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 tracking-tight">
             {currentCategory.name}
           </h1>
           {currentCategory.description && (
@@ -49,29 +53,30 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
               {currentCategory.description}
             </p>
           )}
-          <div className="mt-3 text-xs text-stone-500 font-mono tabular-nums">
-            {categoryBooks.length} {categoryBooks.length === 1 ? 'book available' : 'books available'}
+          <div className="mt-3 font-mono text-xs font-semibold text-stone-500">
+            {categoryBooks.length} {categoryBooks.length === 1 ? 'Book Cataloged' : 'Books Cataloged'}
           </div>
         </div>
 
+        {/* Real Books in Category */}
         {categoryBooks.length === 0 ? (
-          <div className="bg-white rounded-xl border border-stone-200 p-12 text-center max-w-lg mx-auto">
-            <BookOpen className="w-10 h-10 text-stone-300 mx-auto mb-3" />
-            <h3 className="font-serif text-lg font-bold text-stone-800">
-              No books are available in this category yet.
+          <div className="bg-white rounded-2xl border border-stone-200 p-16 text-center max-w-lg mx-auto shadow-xs">
+            <BookOpen className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+            <h3 className="font-serif text-xl font-bold text-stone-800">
+              No books currently in this subject
             </h3>
-            <p className="text-xs text-stone-500 mt-1.5">
-              Check back soon as new public domain and open-access books are uploaded regularly.
+            <p className="text-xs text-stone-500 mt-2 leading-relaxed">
+              New open-access and public domain books are added continuously. Explore other subjects in the library.
             </p>
             <button
               onClick={() => onSelectCategory(undefined)}
-              className="mt-5 px-4 py-2 text-xs font-medium text-stone-800 bg-stone-100 hover:bg-stone-200 rounded-lg transition-colors"
+              className="mt-6 px-5 py-2.5 text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 rounded-xl transition-colors cursor-pointer"
             >
-              Browse Other Categories
+              Browse All Categories
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-7">
             {categoryBooks.map(book => (
               <BookCard
                 key={book.id}
@@ -89,17 +94,20 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
 
   // Otherwise, show the grid of all categories
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-10 text-center max-w-2xl mx-auto">
-        <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-900 tracking-tight">
-          Library Subject Categories
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
+      <div className="text-center max-w-2xl mx-auto">
+        <span className="text-xs uppercase tracking-widest text-amber-900 font-bold block mb-1">
+          Library Collections
+        </span>
+        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 tracking-tight">
+          Subject Categories
         </h1>
         <p className="text-sm text-stone-600 mt-2 leading-relaxed">
-          Explore curated subjects from classic economics and business to literature, family, and personal growth.
+          Explore curated subjects from classic business and psychology to philosophy, literature, and personal growth.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {categories.map(cat => {
           const count = books.filter(b => b.category_id === cat.id).length;
 
@@ -107,24 +115,24 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             <div
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
-              className="group bg-white p-6 rounded-xl border border-stone-200 hover:border-amber-800/60 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between"
+              className="group bg-white p-6 sm:p-7 rounded-2xl border border-stone-200/90 hover:border-amber-900/60 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col justify-between"
             >
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-serif text-lg font-bold text-stone-900 group-hover:text-amber-900 transition-colors">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <h3 className="font-serif text-lg font-bold text-stone-900 group-hover:text-amber-950 transition-colors">
                     {cat.name}
                   </h3>
-                  <span className="text-xs font-mono tabular-nums text-stone-500 bg-stone-100 px-2 py-0.5 rounded">
+                  <span className="text-xs font-mono font-medium text-stone-600 bg-stone-100 px-2.5 py-1 rounded-md border border-stone-200/60 shrink-0">
                     {count} {count === 1 ? 'book' : 'books'}
                   </span>
                 </div>
                 <p className="text-xs text-stone-500 leading-relaxed line-clamp-2">
-                  {cat.description || 'Explore works categorized under this topic.'}
+                  {cat.description || 'Explore digitized works categorized under this topic.'}
                 </p>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-medium text-amber-900 group-hover:text-amber-950">
-                <span>View Books</span>
+              <div className="mt-6 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-semibold text-amber-900 group-hover:text-amber-950">
+                <span>Explore Subject Collection</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
               </div>
             </div>

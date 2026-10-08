@@ -16,7 +16,7 @@ import { PDFReader } from './components/PDFReader';
 import { AdminLogin } from './components/AdminLogin';
 import { AdminDashboard } from './components/AdminDashboard';
 import { BookForm } from './components/BookForm';
-import { AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, X, Library, ShieldCheck, BookOpen } from 'lucide-react';
 
 export default function App() {
   const [currentView, setCurrentView] = useState<ActiveView>({ type: 'home' });
@@ -25,6 +25,7 @@ export default function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [showAboutModal, setShowAboutModal] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
@@ -205,7 +206,10 @@ export default function App() {
           onNavigate={navigateTo}
           isAdmin={isAdmin}
           onAdminLogout={handleAdminLogout}
-          onSearchSubmit={(q) => navigateTo({ type: 'books', search: q })}
+          onSearchSubmit={(q, cat) => navigateTo({ type: 'books', search: q, categoryId: cat })}
+          categories={categories}
+          totalBooks={books.length}
+          onOpenAbout={() => setShowAboutModal(true)}
         />
       )}
 
@@ -226,7 +230,7 @@ export default function App() {
                 onOpenBook={(bookId) => navigateTo({ type: 'book-details', bookId })}
                 onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
                 onSelectCategory={(categoryId) => navigateTo({ type: 'books', categoryId })}
-                onNavigateBooks={(searchQuery) => navigateTo({ type: 'books', search: searchQuery })}
+                onNavigateBooks={(searchQuery, categoryId) => navigateTo({ type: 'books', search: searchQuery, categoryId })}
                 onNavigateCategories={() => navigateTo({ type: 'categories' })}
               />
             )}
@@ -264,9 +268,11 @@ export default function App() {
               currentActiveBook ? (
                 <BookDetails
                   book={currentActiveBook}
+                  allBooks={books}
                   onBack={() => navigateTo({ type: 'books' })}
                   onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
                   onSelectCategory={(categoryId) => navigateTo({ type: 'books', categoryId })}
+                  onOpenBook={(bookId) => navigateTo({ type: 'book-details', bookId })}
                 />
               ) : (
                 <div className="max-w-md mx-auto py-24 text-center">
@@ -359,6 +365,65 @@ export default function App() {
           onNavigateCategories={() => navigateTo({ type: 'categories' })}
           onNavigateAdmin={() => navigateTo(isAdmin ? { type: 'admin' } : { type: 'admin-login' })}
         />
+      )}
+
+      {/* About OpenBook Library Modal */}
+      {showAboutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 relative">
+            <button
+              onClick={() => setShowAboutModal(false)}
+              className="absolute top-5 right-5 p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+              aria-label="Close dialog"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-stone-900 text-amber-100 flex items-center justify-center border border-amber-900/40">
+                <Library className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif text-xl font-bold text-stone-900">
+                  About OpenBook Library
+                </h3>
+                <span className="text-[10px] tracking-widest uppercase font-semibold text-amber-900 block">
+                  Free Digital Public Collection
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3.5 text-xs text-stone-600 leading-relaxed font-sans">
+              <p>
+                OpenBook Library is a free, non-commercial digital bookstore dedicated to the democratization of literature, self-education, and lifelong knowledge.
+              </p>
+              <p>
+                All books cataloged are preserved using permanent Cloud Firestore chunk storage, guaranteeing high-resolution unabridged editions that are completely free to read online or download.
+              </p>
+              <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200/80 space-y-2">
+                <div className="flex items-center gap-2 font-bold text-stone-900">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Reader Guarantees</span>
+                </div>
+                <ul className="space-y-1 text-stone-500 list-disc list-inside">
+                  <li>Zero user registration or login required for readers</li>
+                  <li>Instant web browser PDF reading with zoom & search</li>
+                  <li>Direct full-file PDF downloads for offline reading</li>
+                  <li>Permanent multi-region cloud preservation</li>
+                </ul>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <button
+                onClick={() => setShowAboutModal(false)}
+                className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Return to Bookstore
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
