@@ -5,3 +5,309 @@
   --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
+
+/* =========================================================================
+   3D BOOKSHELF & EDITORIAL STYLING
+   ========================================================================= */
+
+.perspective-shelf {
+  perspective: 1400px;
+  perspective-origin: 50% 30%;
+}
+
+.perspective-book {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* Realistic Handcrafted Wooden Bookshelf Plank */
+.wood-shelf-plank {
+  position: relative;
+  height: 24px;
+  background: linear-gradient(180deg, #3d2714 0%, #291a0c 40%, #1d1208 100%);
+  border-top: 2px solid #5a3a1f;
+  border-bottom: 2px solid #130b05;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 18px 30px -5px rgba(0, 0, 0, 0.5),
+    0 8px 12px -3px rgba(0, 0, 0, 0.35);
+}
+
+.wood-shelf-plank::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(90deg, #24160b 0%, #462c16 20%, #352110 50%, #4a2f18 80%, #24160b 100%);
+  transform: perspective(600px) rotateX(45deg);
+  transform-origin: bottom;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.12);
+}
+
+.wood-shelf-plank::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.1) 60%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Light beam / Gallery spotlight on the bookshelf */
+.shelf-spotlight {
+  background: radial-gradient(ellipse 65% 55% at 50% 0%, rgba(254, 243, 199, 0.18) 0%, rgba(254, 243, 199, 0.05) 55%, transparent 100%);
+}
+
+/* Realistic 3D Book Elevation & Tilt on hover */
+.book-standing-3d {
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom center;
+}
+
+.book-standing-3d:hover {
+  transform: translateY(-14px) rotateY(-8deg) scale(1.03);
+}
+
+/* Hardcover Spine Ridge and Lighting Effect */
+.hardcover-spine-crease {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 18px;
+  background: linear-gradient(90deg, 
+    rgba(0, 0, 0, 0.45) 0%, 
+    rgba(0, 0, 0, 0.15) 30%, 
+    rgba(255, 255, 255, 0.18) 55%, 
+    rgba(0, 0, 0, 0.35) 75%, 
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Right Page Edges Stack */
+.hardcover-page-edges {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: -5px;
+  width: 5px;
+  background: linear-gradient(90deg, #d8d3c5 0%, #ece8dd 50%, #c4bfae 100%);
+  border-right: 1px solid #b8b2a0;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.2);
+  transform: skewY(15deg);
+  transform-origin: left top;
+  pointer-events: none;
+}
+
+/* Top Page Edge (view from above) */
+.hardcover-top-edge {
+  position: absolute;
+  top: -4px;
+  left: 2px;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(180deg, #ece7db 0%, #dcd6c6 100%);
+  transform: skewX(45deg);
+  transform-origin: left bottom;
+  box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+
+/* Leather Texture Simulation for fallback book bindings */
+.leather-bound-texture {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 0),
+                    radial-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 0);
+  background-size: 8px 8px;
+  background-position: 0 0, 4px 4px;
+}
+
+/* =========================================================================
+   BOLD RED HERO & OVERLAPPING 3D BOOKS STYLING
+   ========================================================================= */
+
+.hero-red-circle {
+  background: #FF3038;
+  border-radius: 9999px;
+  box-shadow: 0 30px 80px -15px rgba(255, 48, 56, 0.4);
+}
+
+.hero-book-rear {
+  transform: rotate(-8deg) translateY(-12px) translateX(-10px);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -15px 25px 45px -10px rgba(0, 0, 0, 0.45);
+}
+
+.hero-book-rear:hover {
+  transform: rotate(-6deg) translateY(-20px) translateX(-10px) scale(1.02);
+  box-shadow: -20px 35px 55px -10px rgba(0, 0, 0, 0.52);
+}
+
+.hero-book-front {
+  transform: rotate(4deg) translateY(14px) translateX(25px);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 20px 30px 50px -10px rgba(0, 0, 0, 0.45);
+}
+
+.hero-book-front:hover {
+  transform: rotate(2deg) translateY(6px) translateX(25px) scale(1.02);
+  box-shadow: 25px 40px 60px -10px rgba(0, 0, 0, 0.52);
+}
+
+/* Upright Books on Realistic Wooden Shelves */
+.shelf-book-stand {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: bottom center;
+  box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.45), -2px 0 5px rgba(0, 0, 0, 0.2);
+}
+
+.shelf-book-stand:hover {
+  transform: translateY(-12px) scale(1.03);
+  box-shadow: 0 22px 30px -5px rgba(0, 0, 0, 0.55), -4px 0 8px rgba(0, 0, 0, 0.25);
+}
+
+
+/* =========================================================================
+   REALISTIC OPEN 3D BOOK SPREAD STYLING
+   ========================================================================= */
+
+.open-book-container {
+  perspective: 1600px;
+  transform-style: preserve-3d;
+}
+
+.open-book-spread {
+  position: relative;
+  display: flex;
+  background: #fbf9f2;
+  border-radius: 6px;
+  box-shadow: 
+    0 25px 50px -12px rgba(18, 12, 6, 0.35),
+    0 12px 24px -8px rgba(18, 12, 6, 0.25),
+    0 0 0 1px rgba(120, 80, 40, 0.15);
+  transform-style: preserve-3d;
+}
+
+/* Left and right page curvature */
+.open-book-page {
+  position: relative;
+  flex: 1;
+  background-color: #faf7ee;
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.5), rgba(250, 245, 235, 0.7)),
+    radial-gradient(#d3cbbd 0.5px, transparent 0.5px);
+  background-size: 100% 100%, 16px 16px;
+  transition: transform 0.3s ease;
+}
+
+.open-book-page-left {
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  transform-origin: right center;
+  box-shadow: 
+    inset -18px 0 25px -10px rgba(0, 0, 0, 0.18),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 1px 0 2px rgba(0, 0, 0, 0.05);
+}
+
+.open-book-page-right {
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  transform-origin: left center;
+  box-shadow: 
+    inset 18px 0 25px -10px rgba(0, 0, 0, 0.18),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset -1px 0 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Center book gutter / deep crease */
+.open-book-gutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 32px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    90deg, 
+    transparent 0%, 
+    rgba(30, 20, 10, 0.12) 20%, 
+    rgba(20, 10, 5, 0.45) 48%, 
+    rgba(15, 8, 3, 0.55) 50%, 
+    rgba(20, 10, 5, 0.45) 52%, 
+    rgba(30, 20, 10, 0.12) 80%, 
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* Realistic stacked page rims beneath open pages */
+.open-book-stack-left {
+  position: absolute;
+  left: -8px;
+  top: 4px;
+  bottom: -6px;
+  width: 8px;
+  background: linear-gradient(90deg, #998e7b 0%, #d8d1c0 50%, #eee9dc 100%);
+  border-radius: 4px 0 0 4px;
+  box-shadow: -2px 4px 6px rgba(0, 0, 0, 0.25);
+}
+
+.open-book-stack-right {
+  position: absolute;
+  right: -8px;
+  top: 4px;
+  bottom: -6px;
+  width: 8px;
+  background: linear-gradient(90deg, #eee9dc 0%, #d8d1c0 50%, #998e7b 100%);
+  border-radius: 0 4px 4px 0;
+  box-shadow: 2px 4px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Hardcover base rim visible underneath */
+.open-book-cover-rim {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  bottom: -10px;
+  height: 12px;
+  background: linear-gradient(180deg, #442813 0%, #2a1607 100%);
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+  z-index: -1;
+}
+
+/* Silk Bookmark Ribbon */
+.open-book-ribbon {
+  position: absolute;
+  top: 0;
+  bottom: -32px;
+  left: calc(50% - 7px);
+  width: 14px;
+  background: linear-gradient(180deg, #8b1e1e 0%, #b82d2d 40%, #701414 100%);
+  box-shadow: 
+    1px 4px 8px rgba(0, 0, 0, 0.35),
+    inset 1px 0 1px rgba(255, 255, 255, 0.25);
+  z-index: 25;
+  border-radius: 0 0 2px 2px;
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% calc(100% - 7px), 0% 100%);
+}
+
+/* Reading room subtle ambient gradient */
+.reading-room-canvas {
+  background-color: #FBF9F4;
+  background-image: 
+    radial-gradient(circle at 50% 0%, rgba(245, 238, 222, 0.8) 0%, transparent 70%),
+    radial-gradient(circle at 100% 100%, rgba(235, 225, 205, 0.5) 0%, transparent 60%);
+}
+
+

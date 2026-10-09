@@ -3,18 +3,14 @@ import {
   ArrowLeft, 
   BookOpen, 
   Download, 
-  FileText, 
-  Calendar, 
-  CheckCircle2, 
   ShieldCheck, 
   Loader2, 
   ExternalLink,
-  Sparkles,
   Share2,
   Bookmark
 } from 'lucide-react';
 import { Book } from '../types/library';
-import { formatFileSize, formatDate, downloadBookPdf } from '../lib/api';
+import { formatFileSize, downloadBookPdf } from '../lib/api';
 import { BookCard } from './BookCard';
 
 interface BookDetailsProps {
@@ -44,7 +40,6 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
       await downloadBookPdf(book.id, book.title);
     } catch (err: any) {
       console.error('Download error:', err);
-      alert('Could not download PDF. Please check connection and try again.');
     } finally {
       setIsDownloading(false);
     }
@@ -59,7 +54,7 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
   // Update document title for SEO
   useEffect(() => {
     const originalTitle = document.title;
-    document.title = `${book.title} by ${book.author} — OpenBook Library`;
+    document.title = `${book.title} by ${book.author} — OpenBook Digital Library`;
     return () => {
       document.title = originalTitle;
     };
@@ -69,7 +64,6 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
   const relatedBooks = allBooks
     .filter(b => b.id !== book.id)
     .sort((a, b) => {
-      // Prioritize same category
       if (a.category_id === book.category_id && b.category_id !== book.category_id) return -1;
       if (b.category_id === book.category_id && a.category_id !== book.category_id) return 1;
       return 0;
@@ -81,7 +75,7 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
       
       {/* 1. Breadcrumbs & Top Navigation */}
       <div className="flex items-center justify-between text-xs text-stone-500">
-        <div className="flex items-center gap-1.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={onBack}
             className="hover:text-stone-900 transition-colors flex items-center gap-1 cursor-pointer font-medium"
@@ -89,7 +83,7 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Catalog</span>
           </button>
-          <span>/</span>
+          <span aria-hidden="true" className="text-stone-300">/</span>
           {book.category_name && (
             <>
               <button
@@ -98,7 +92,7 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
               >
                 {book.category_name}
               </button>
-              <span>/</span>
+              <span aria-hidden="true" className="text-stone-300">/</span>
             </>
           )}
           <span className="text-stone-800 font-semibold truncate max-w-[200px] sm:max-w-xs">
@@ -108,26 +102,26 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
 
         <button
           onClick={handleShare}
-          className="hover:text-stone-900 transition-colors flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white border border-stone-200 shadow-2xs cursor-pointer"
+          className="hover:text-stone-900 transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-stone-200 shadow-2xs cursor-pointer font-medium"
         >
-          <Share2 className="w-3 h-3 text-stone-600" />
-          <span>{copiedLink ? 'Link Copied!' : 'Share'}</span>
+          <Share2 className="w-3.5 h-3.5 text-stone-500" />
+          <span>{copiedLink ? 'Link Copied!' : 'Share Volume'}</span>
         </button>
       </div>
 
-      {/* 2. Main Bookstore Book Product Showcase */}
-      <div className="bg-white rounded-2xl border border-stone-200/90 overflow-hidden shadow-xs p-6 sm:p-10 lg:p-12">
+      {/* 2. Main Editorial Book Edition Showcase */}
+      <div className="bg-white rounded-3xl border border-stone-200/90 overflow-hidden shadow-xs p-6 sm:p-10 lg:p-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
           
           {/* Left Column: 3D Hardcover Book Showcase & Actions */}
           <div className="lg:col-span-5 flex flex-col items-center">
             
             {/* The 3D Book Presentation */}
-            <div className="relative group perspective-1000 w-full max-w-[300px]">
+            <div className="relative group perspective-book w-full max-w-[300px]">
               {/* Soft ground shadow */}
               <div className="absolute inset-x-4 -bottom-6 h-8 bg-stone-900/35 rounded-full blur-xl" />
 
-              <div className="relative aspect-[3/4.4] w-full rounded-r-md rounded-l-sm bg-stone-900 shadow-2xl overflow-hidden border border-stone-800">
+              <div className="relative aspect-[3/4.4] w-full rounded-r-md rounded-l-xs bg-stone-900 shadow-2xl overflow-hidden border-t border-r border-b border-stone-700/80 transition-transform duration-500 group-hover:-translate-y-2 group-hover:rotate-1">
                 {book.cover_url && !imageError ? (
                   <img
                     src={book.cover_url}
@@ -139,8 +133,8 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
                 ) : (
                   <div className="w-full h-full p-6 flex flex-col justify-between bg-gradient-to-b from-stone-900 via-stone-850 to-stone-950 text-stone-100">
                     <div className="border-b border-stone-700 pb-3">
-                      <span className="text-[10px] uppercase tracking-widest text-amber-300 font-sans block">
-                        {book.category_name || 'Open Library Edition'}
+                      <span className="text-[10px] uppercase tracking-widest text-[#d4af37] font-sans block">
+                        {book.category_name || 'Open Digital Edition'}
                       </span>
                     </div>
                     <div className="py-4">
@@ -159,9 +153,11 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
                 )}
 
                 {/* Spine Shadow on Left Edge */}
-                <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-black/50 via-black/20 to-transparent pointer-events-none" />
-                <div className="absolute left-3 top-0 bottom-0 w-[1px] bg-white/15 pointer-events-none" />
-                <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-gradient-to-l from-black/30 via-white/10 to-transparent pointer-events-none" />
+                <div className="hardcover-spine-crease" />
+
+                {/* Top and side page edge depth */}
+                <div className="hardcover-top-edge" />
+                <div className="hardcover-page-edges" />
               </div>
             </div>
 
@@ -172,9 +168,9 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
                 href={`/api/pdf/${book.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full py-3.5 px-4 bg-stone-900 hover:bg-amber-950 text-white rounded-xl font-semibold text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer text-center"
+                className="w-full py-3.5 px-4 bg-[#FF3038] hover:bg-[#E52028] text-white rounded-xl font-semibold text-sm transition-all shadow-[0_10px_20px_rgba(255,48,56,0.3)] hover:shadow-[0_14px_25px_rgba(255,48,56,0.4)] flex items-center justify-center gap-2 cursor-pointer text-center"
               >
-                <BookOpen className="w-4 h-4 text-amber-300" />
+                <BookOpen className="w-4 h-4 text-white" />
                 <span>Read Online in New Tab</span>
               </a>
 
@@ -182,12 +178,12 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
               <button
                 onClick={handleDownload}
                 disabled={isDownloading}
-                className="w-full py-3 px-4 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
+                className="w-full py-3.5 px-4 bg-stone-50 hover:bg-stone-100 border border-stone-300 text-stone-800 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {isDownloading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-stone-600" />
-                    <span>Downloading PDF...</span>
+                    <span>Preparing Download...</span>
                   </>
                 ) : (
                   <>
@@ -198,7 +194,7 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
               </button>
 
               <p className="text-[11px] text-center text-stone-500 pt-1">
-                Direct PDF file • Verified high-speed download
+                Verified high-speed download · Unabridged PDF
               </p>
             </div>
           </div>
@@ -207,24 +203,26 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
           <div className="lg:col-span-7 flex flex-col justify-between">
             <div className="space-y-6">
               
-              {/* Category & Badge */}
-              <div className="flex items-center gap-2 flex-wrap">
+              {/* Category & Metadata (Zero-Pill Discipline) */}
+              <div className="flex items-center gap-2 text-xs text-stone-500 flex-wrap">
                 {book.category_name && (
                   <button
                     onClick={() => onSelectCategory(book.category_id)}
-                    className="text-xs uppercase tracking-wider text-amber-950 font-bold bg-amber-100/80 px-2.5 py-1 rounded-full hover:bg-amber-200 transition-colors"
+                    className="font-bold uppercase tracking-wider text-amber-900 hover:text-amber-950 transition-colors"
                   >
                     {book.category_name}
                   </button>
                 )}
-                <span className="text-xs text-stone-400">•</span>
-                <span className="text-xs font-mono text-stone-500">
+                <span aria-hidden="true" className="text-stone-300">·</span>
+                <span className="font-mono text-stone-600">
                   {book.page_count ? `${book.page_count} Pages` : 'Complete Edition'}
                 </span>
-                <span className="text-xs text-stone-400">•</span>
-                <span className="text-xs font-mono text-stone-500">
+                <span aria-hidden="true" className="text-stone-300">·</span>
+                <span className="font-mono text-stone-600">
                   {formatFileSize(book.file_size)}
                 </span>
+                <span aria-hidden="true" className="text-stone-300">·</span>
+                <span className="text-emerald-700 font-semibold">Free Public Edition</span>
               </div>
 
               {/* Book Title & Author */}
@@ -238,22 +236,22 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
               </div>
 
               {/* Bookstore Specifications Bar */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 px-5 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 py-4 px-5 bg-stone-50/80 rounded-2xl border border-stone-200/90 text-xs">
                 <div>
                   <span className="text-stone-400 uppercase tracking-wider text-[10px] block font-sans">Edition</span>
                   <span className="font-bold text-stone-800 mt-0.5 block">Unabridged PDF</span>
                 </div>
                 <div>
                   <span className="text-stone-400 uppercase tracking-wider text-[10px] block font-sans">Pages</span>
-                  <span className="font-mono text-stone-800 mt-0.5 block">{book.page_count} pages</span>
+                  <span className="font-mono text-stone-800 mt-0.5 block">{book.page_count || 'Full text'}</span>
                 </div>
                 <div>
                   <span className="text-stone-400 uppercase tracking-wider text-[10px] block font-sans">File Size</span>
                   <span className="font-mono text-stone-800 mt-0.5 block">{formatFileSize(book.file_size)}</span>
                 </div>
                 <div>
-                  <span className="text-stone-400 uppercase tracking-wider text-[10px] block font-sans">Language</span>
-                  <span className="font-bold text-stone-800 mt-0.5 block">English</span>
+                  <span className="text-stone-400 uppercase tracking-wider text-[10px] block font-sans">Access</span>
+                  <span className="font-bold text-stone-800 mt-0.5 block">100% Free</span>
                 </div>
                 {book.publication_year && (
                   <div className="col-span-2 pt-2 border-t border-stone-200/80">
@@ -281,7 +279,7 @@ export const BookDetails: React.FC<BookDetailsProps> = ({
               </div>
 
               {/* Free Access Guarantee */}
-              <div className="bg-[#FAF7F0] border border-amber-900/20 rounded-xl p-4 text-xs text-stone-700 flex items-start gap-3">
+              <div className="bg-[#FAF7F0] border border-amber-900/15 rounded-2xl p-5 text-xs text-stone-700 flex items-start gap-3.5">
                 <ShieldCheck className="w-5 h-5 text-amber-800 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold text-stone-900 block mb-0.5">

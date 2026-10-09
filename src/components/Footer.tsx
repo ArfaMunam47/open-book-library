@@ -15,7 +15,7 @@ export const Footer: React.FC<FooterProps> = ({
   onNavigateAdmin
 }) => {
   return (
-    <footer className="mt-24 border-t border-stone-200/90 bg-[#F4F1EA] text-stone-600 text-xs">
+    <footer className="mt-24 border-t border-stone-200/90 bg-[#FAFAF8] text-[#626262] text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         
         {/* Main Footer Columns */}
@@ -24,20 +24,20 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 1: Brand & Mission */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-stone-900 text-amber-100 flex items-center justify-center shrink-0 border border-amber-900/40">
+              <div className="w-8 h-8 rounded-lg bg-[#FF3038] text-white flex items-center justify-center shrink-0 shadow-xs">
                 <Library className="w-4 h-4" />
               </div>
               <div className="flex flex-col">
-                <span className="font-serif text-xl font-black tracking-tight text-stone-900 leading-none">
+                <span className="font-serif text-xl font-black tracking-tight text-[#191919] leading-none">
                   OpenBook
                 </span>
-                <span className="text-[9px] tracking-[0.2em] font-bold text-amber-900/80 uppercase mt-0.5">
+                <span className="text-[9px] tracking-[0.2em] font-bold text-[#FF3038] uppercase mt-0.5">
                   Digital Library
                 </span>
               </div>
             </div>
             
-            <p className="text-stone-500 leading-relaxed text-xs">
+            <p className="text-[#626262] leading-relaxed text-xs">
               A free open-access public bookstore and digital repository. Dedicated to universal access to knowledge through instant in-browser reading and complete, unabridged PDF downloads.
             </p>
 
@@ -49,28 +49,23 @@ export const Footer: React.FC<FooterProps> = ({
 
           {/* Column 2: Catalog Navigation */}
           <div className="space-y-3">
-            <h4 className="font-sans font-bold text-stone-900 uppercase tracking-wider text-[11px]">
+            <h4 className="font-sans font-bold text-[#191919] uppercase tracking-wider text-[11px]">
               Explore Collection
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <button onClick={onNavigateHome} className="hover:text-amber-950 transition-colors cursor-pointer">
+                <button onClick={onNavigateHome} className="hover:text-[#FF3038] transition-colors cursor-pointer">
                   Bookstore Front Page
                 </button>
               </li>
               <li>
-                <button onClick={onNavigateBooks} className="hover:text-amber-950 transition-colors cursor-pointer">
+                <button onClick={onNavigateBooks} className="hover:text-[#FF3038] transition-colors cursor-pointer">
                   Browse All Titles
                 </button>
               </li>
               <li>
-                <button onClick={onNavigateCategories} className="hover:text-amber-950 transition-colors cursor-pointer">
+                <button onClick={onNavigateCategories} className="hover:text-[#FF3038] transition-colors cursor-pointer">
                   Subject Categories
-                </button>
-              </li>
-              <li>
-                <button onClick={() => onNavigateBooks()} className="hover:text-amber-950 transition-colors cursor-pointer">
-                  Featured Reading Room
                 </button>
               </li>
             </ul>

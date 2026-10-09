@@ -199,20 +199,12 @@ export class DatabaseService {
     // Load books
     const bookSnap = await getDocs(collection(this.firestore, 'books'));
     if (!bookSnap.empty) {
+      // Remote Firestore is the authoritative source of truth
       const remoteBooks = bookSnap.docs.map(d => ({ ...(d.data() as Book), id: d.id }));
-      for (const rb of remoteBooks) {
-        const idx = this.books.findIndex(b => b.id === rb.id);
-        if (idx >= 0) {
-          this.books[idx] = rb;
-        } else {
-          this.books.push(rb);
-        }
-      }
-    }
-
-    // Ensure any book currently in local memory is also pushed up to Firestore
-    for (const lb of this.books) {
-      if (!bookSnap.docs.some(d => d.id === lb.id)) {
+      this.books = remoteBooks;
+    } else if (this.books.length > 0) {
+      // Firestore is empty: perform initial push of existing local books
+      for (const lb of this.books) {
         await setDoc(doc(this.firestore, 'books', lb.id), cleanForFirestore(lb)).catch(console.warn);
         console.log(`Synced local book "${lb.title}" to persistent Firestore.`);
       }
@@ -270,32 +262,13 @@ export class DatabaseService {
   private async migrateLocalDataToFirestore() {
     if (!this.firestore) return;
 
-    // Check existing books in DB_FILE to ensure local cache is synced
-    if (fs.existsSync(DB_FILE)) {
-      try {
-        const raw = fs.readFileSync(DB_FILE, 'utf-8');
-        const localData = JSON.parse(raw);
-        const localBooks: Book[] = localData.books || [];
-
-        for (const localBook of localBooks) {
-          const existing = this.books.find(b => b.id === localBook.id);
-          if (!existing) {
-            console.log(`Migrating book "${localBook.title}" (${localBook.id}) to persistent Cloud Firestore...`);
-            await setDoc(doc(this.firestore, 'books', localBook.id), cleanForFirestore(localBook));
-            this.books.unshift(localBook);
-          }
-
-          // If PDF exists on disk, persist its binary chunks to Firestore
-          if (localBook.pdf_path && fs.existsSync(localBook.pdf_path)) {
-            await this.persistFileToChunks(localBook.id, 'pdf_chunks', localBook.pdf_path);
-          }
-          // If cover exists on disk, persist its binary chunks to Firestore
-          if (localBook.cover_path && fs.existsSync(localBook.cover_path)) {
-            await this.persistFileToChunks(localBook.id, 'cover_chunks', localBook.cover_path);
-          }
-        }
-      } catch (err) {
-        console.warn('Migration note:', err);
+    // Only persist chunks for authoritative books if their disk files exist and chunks are missing
+    for (const book of this.books) {
+      if (book.pdf_path && fs.existsSync(book.pdf_path)) {
+        await this.persistFileToChunks(book.id, 'pdf_chunks', book.pdf_path);
+      }
+      if (book.cover_path && fs.existsSync(book.cover_path)) {
+        await this.persistFileToChunks(book.id, 'cover_chunks', book.cover_path);
       }
     }
   }

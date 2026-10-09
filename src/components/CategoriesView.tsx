@@ -40,8 +40,8 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         {/* Category Header */}
         <div className="pb-6 border-b border-stone-200">
           <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-amber-900" />
-            <span className="text-xs uppercase tracking-widest text-amber-950 font-bold">
+            <span className="w-2 h-2 rounded-full bg-[#FF3038]" />
+            <span className="text-xs uppercase font-mono tracking-widest text-[#FF3038] font-bold">
               Subject Collection
             </span>
           </div>
@@ -96,7 +96,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
       <div className="text-center max-w-2xl mx-auto">
-        <span className="text-xs uppercase tracking-widest text-amber-900 font-bold block mb-1">
+        <span className="text-xs uppercase font-mono tracking-widest text-[#FF3038] font-bold block mb-1">
           Library Collections
         </span>
         <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 tracking-tight">
@@ -115,11 +115,11 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
             <div
               key={cat.id}
               onClick={() => onSelectCategory(cat.id)}
-              className="group bg-white p-6 sm:p-7 rounded-2xl border border-stone-200/90 hover:border-amber-900/60 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col justify-between"
+              className="group bg-white p-6 sm:p-7 rounded-2xl border border-stone-200/90 hover:border-red-400 hover:shadow-lg hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col justify-between"
             >
               <div>
                 <div className="flex items-center justify-between gap-3 mb-2">
-                  <h3 className="font-serif text-lg font-bold text-stone-900 group-hover:text-amber-950 transition-colors">
+                  <h3 className="font-serif text-lg font-bold text-stone-900 group-hover:text-[#FF3038] transition-colors">
                     {cat.name}
                   </h3>
                   <span className="text-xs font-mono font-medium text-stone-600 bg-stone-100 px-2.5 py-1 rounded-md border border-stone-200/60 shrink-0">
@@ -131,7 +131,7 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
                 </p>
               </div>
 
-              <div className="mt-6 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-semibold text-amber-900 group-hover:text-amber-950">
+              <div className="mt-6 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-semibold text-[#FF3038] group-hover:text-red-700">
                 <span>Explore Subject Collection</span>
                 <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
               </div>

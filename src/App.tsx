@@ -179,7 +179,7 @@ export default function App() {
     : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FBF9F5] text-stone-900 font-sans selection:bg-amber-100 selection:text-amber-900">
+    <div className="min-h-screen flex flex-col bg-white text-[#191919] font-sans selection:bg-red-100 selection:text-red-900">
       
       {/* Toast Notification */}
       {toast && (
@@ -213,12 +213,12 @@ export default function App() {
         />
       )}
 
-      {/* View Routing */}
-      <main className="flex-1">
+      {/* Main Content Area */}
+      <main className="flex-1 w-full">
         {loading && books.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-stone-400">
-            <Loader2 className="w-8 h-8 animate-spin mb-3 text-amber-900" />
-            <p className="text-xs font-mono">Loading Open Book Library...</p>
+            <Loader2 className="w-8 h-8 animate-spin mb-3 text-[#FF3038]" />
+            <p className="text-xs font-mono">Loading OpenBook Digital Library...</p>
           </div>
         ) : (
           <>
