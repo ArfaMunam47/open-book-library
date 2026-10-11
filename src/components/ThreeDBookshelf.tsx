@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Book, Category } from '../types/library';
-import { BookOpen, Layers, Sparkles } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { formatFileSize } from '../lib/api';
 
 interface ThreeDBookshelfProps {
@@ -17,194 +17,255 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
   onOpenBook,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [hoveredBookId, setHoveredBookId] = useState<string | null>(null);
+  const [activeHoverBookId, setActiveHoverBookId] = useState<string | null>(null);
 
   // Filter books by category
   const filteredBooks = selectedCategory === 'all'
     ? books
     : books.filter(b => b.category_id === selectedCategory || b.category_name?.toLowerCase() === selectedCategory.toLowerCase());
 
-  // Split books across shelf tiers (up to 5 books per shelf)
-  const BOOKS_PER_SHELF = 5;
-  const shelfTiers: Book[][] = [];
-  for (let i = 0; i < filteredBooks.length; i += BOOKS_PER_SHELF) {
-    shelfTiers.push(filteredBooks.slice(i, i + BOOKS_PER_SHELF));
+  // Distribute books across shelves (approx 6-8 books per shelf on large screens)
+  const shelfTiers: { id: string; title: string; books: Book[]; hasDecoration?: 'plant' | 'vase' }[] = [];
+  
+  if (selectedCategory === 'all') {
+    const tier1 = filteredBooks.slice(0, 6);
+    const tier2 = filteredBooks.slice(6, 12);
+    const tier3 = filteredBooks.slice(12, 18);
+
+    if (tier1.length > 0) {
+      shelfTiers.push({
+        id: 'tier-1',
+        title: 'Featured Collection',
+        books: tier1,
+        hasDecoration: 'plant'
+      });
+    }
+    if (tier2.length > 0) {
+      shelfTiers.push({
+        id: 'tier-2',
+        title: 'Popular Reads',
+        books: tier2,
+        hasDecoration: 'vase'
+      });
+    }
+    if (tier3.length > 0) {
+      shelfTiers.push({
+        id: 'tier-3',
+        title: 'Recent Additions',
+        books: tier3
+      });
+    }
+  } else {
+    const catName = categories.find(c => c.id === selectedCategory)?.name || 'Selected Category';
+    shelfTiers.push({
+      id: 'category-tier',
+      title: catName,
+      books: filteredBooks,
+      hasDecoration: 'plant'
+    });
   }
 
   return (
-    <div className="w-full space-y-10">
+    <div className="w-full space-y-16 sm:space-y-20 lg:space-y-24">
       
-      {/* Shelf Header & Category Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-stone-200">
-        <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 text-[#FF3038] text-[11px] font-mono uppercase tracking-widest font-bold mb-2">
-            <span className="w-2 h-2 rounded-full bg-[#FF3038] animate-pulse" />
-            <span>Interactive 3D Bookshelves</span>
-          </div>
-          
-          <h2 className="font-serif text-3xl sm:text-4xl font-black text-[#191919] tracking-tight">
-            The Library Stacks
-          </h2>
-          <p className="text-xs sm:text-sm text-[#626262] mt-1.5 max-w-xl font-sans leading-relaxed">
-            Every volume in our collection rests upright as a physical hardcover edition. Tap or click any book to inspect its details, read online, or download.
-          </p>
-        </div>
-
-        {/* Clean Segmented Category Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap ${
-              selectedCategory === 'all'
-                ? 'bg-[#FF3038] text-white font-semibold shadow-[0_4px_12px_rgba(255,48,56,0.3)]'
-                : 'bg-white text-[#626262] hover:text-[#191919] hover:bg-stone-100 border border-stone-200'
-            }`}
-          >
-            All Volumes ({books.length})
-          </button>
-          
-          {categories.map(cat => (
+      {/* Category Filter Navigation: Refined dark library aesthetic */}
+      {categories.length > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-4 border-b border-[#24352A] pb-4">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
             <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
+              onClick={() => setSelectedCategory('all')}
               className={`px-4 py-2 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap ${
-                selectedCategory === cat.id
-                  ? 'bg-[#FF3038] text-white font-semibold shadow-[0_4px_12px_rgba(255,48,56,0.3)]'
-                  : 'bg-white text-[#626262] hover:text-[#191919] hover:bg-stone-100 border border-stone-200'
+                selectedCategory === 'all'
+                  ? 'bg-[#E2BA60] text-[#0D1510] font-bold shadow-[0_0_15px_rgba(226,186,96,0.3)]'
+                  : 'bg-[#18271E] text-[#B8C8BD] hover:text-[#FAF8F5] hover:bg-[#203428] border border-[#2B4232]'
               }`}
             >
-              {cat.name}
+              All Books ({books.length})
             </button>
-          ))}
-        </div>
-      </div>
+            {categories.map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-4 py-2 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap ${
+                  selectedCategory === cat.id
+                    ? 'bg-[#E2BA60] text-[#0D1510] font-bold shadow-[0_0_15px_rgba(226,186,96,0.3)]'
+                    : 'bg-[#18271E] text-[#B8C8BD] hover:text-[#FAF8F5] hover:bg-[#203428] border border-[#2B4232]'
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
 
-      {/* The Physical Wooden Shelves */}
+          <span className="text-[11px] font-serif text-[#C5D2C9] hidden sm:inline italic">
+            Standing upright on wooden library shelves · Select to read
+          </span>
+        </div>
+      )}
+
+      {/* Floating 3D Bookshelves Collection */}
       {filteredBooks.length === 0 ? (
-        <div className="py-20 text-center bg-white rounded-3xl border border-stone-200 p-8">
-          <BookOpen className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-          <p className="font-serif text-lg font-bold text-[#191919]">No volumes on this shelf yet.</p>
+        <div className="py-20 text-center bg-[#18271E]/60 rounded-2xl border border-[#283C2F] p-8">
+          <BookOpen className="w-10 h-10 text-[#7F9987]/50 mx-auto mb-3" />
+          <p className="font-serif text-lg font-bold text-[#F7F4EE]">No volumes currently on this shelf.</p>
           <button
             onClick={() => setSelectedCategory('all')}
-            className="mt-3 text-xs text-[#FF3038] font-semibold hover:underline cursor-pointer"
+            className="mt-3 text-xs font-semibold text-[#E2BA60] hover:underline cursor-pointer"
           >
-            Return to All Volumes
+            Return to All Books
           </button>
         </div>
       ) : (
-        <div className="space-y-16">
-          {shelfTiers.map((tierBooks, tierIndex) => (
-            <div 
-              key={`shelf-tier-${tierIndex}`} 
-              className="relative rounded-3xl bg-[#F6F3ED]/80 border border-stone-200/90 pt-10 sm:pt-14 pb-0 px-4 sm:px-8 shadow-xs"
-            >
-              {/* Shelf Tier Placard */}
-              <div className="flex items-center justify-between mb-8 px-2">
-                <span className="text-[11px] font-mono tracking-widest uppercase text-stone-500 font-semibold flex items-center gap-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[#FF3038]" />
-                  <span>Shelf Tier 0{tierIndex + 1}</span>
-                </span>
-                <span className="text-xs font-mono text-stone-400">
-                  {tierBooks.length} {tierBooks.length === 1 ? 'Volume' : 'Volumes'} Standing
+        <div className="space-y-24 sm:space-y-28 lg:space-y-32">
+          {shelfTiers.map((tier) => (
+            <div key={tier.id} className="relative w-full">
+              
+              {/* Shelf Section Heading: Elegant ivory serif with gold bullet */}
+              <div className="flex items-center justify-between mb-8 sm:mb-10 px-2 sm:px-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-2 h-2 rounded-full bg-[#E2BA60]" />
+                  <h3 className="font-serif text-xl sm:text-2xl font-semibold text-[#F7F4EE] tracking-tight">
+                    {tier.title}
+                  </h3>
+                </div>
+                <span className="text-[11px] text-[#A2B8A9] font-mono">
+                  {tier.books.length} {tier.books.length === 1 ? 'volume' : 'volumes'}
                 </span>
               </div>
 
-              {/* Upright Standing Books Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8 lg:gap-10 items-end px-2 sm:px-4 min-h-[300px] sm:min-h-[340px]">
-                {tierBooks.map((book) => {
-                  const isHovered = hoveredBookId === book.id;
+              {/* The Bookshelf Stage */}
+              <div className="relative w-full px-2 sm:px-6">
+                
+                {/* Upright Books Row */}
+                <div className="relative z-10 flex items-end gap-5 sm:gap-7 lg:gap-8 overflow-x-auto pb-0.5 pt-12 px-2 scrollbar-none">
+                  {tier.books.map((book) => {
+                    const isHovered = activeHoverBookId === book.id;
 
-                  return (
-                    <div
-                      key={book.id}
-                      onClick={() => onOpenBook(book.id)}
-                      onMouseEnter={() => setHoveredBookId(book.id)}
-                      onMouseLeave={() => setHoveredBookId(null)}
-                      className="group flex flex-col items-center cursor-pointer select-none transition-transform"
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Open ${book.title} by ${book.author}`}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          onOpenBook(book.id);
-                        }
-                      }}
-                    >
-                      {/* Floating Tooltip Indicator on Hover */}
-                      <div className={`absolute -top-12 z-30 transition-all duration-200 pointer-events-none ${
-                        isHovered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
-                      }`}>
-                        <span className="bg-[#191919] text-white text-[11px] font-sans font-medium px-3 py-1 rounded-full shadow-lg whitespace-nowrap flex items-center gap-1">
-                          <span>Inspect Volume</span>
-                        </span>
-                      </div>
-
-                      {/* 3D Standing Hardcover Book */}
-                      <div className="relative w-full max-w-[170px] aspect-[2/3] shelf-book-stand preserve-3d">
+                    return (
+                      <div
+                        key={book.id}
+                        onClick={() => onOpenBook(book.id)}
+                        onMouseEnter={() => setActiveHoverBookId(book.id)}
+                        onMouseLeave={() => setActiveHoverBookId(null)}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Open edition: ${book.title} by ${book.author}`}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onOpenBook(book.id);
+                          }
+                        }}
+                        className="group shrink-0 flex flex-col items-center cursor-pointer select-none relative focus:outline-none"
+                      >
                         
-                        {/* Top Page Edge (3D view from above) */}
-                        <div className="hardcover-top-edge" />
-
-                        {/* Right Stacked Pages Edge (3D view from side) */}
-                        <div className="hardcover-page-edges" />
-
-                        {/* Book Cover Face */}
-                        <div className="relative w-full h-full rounded-r-sm rounded-l-xs overflow-hidden shadow-2xl bg-[#191919] border-t border-r border-stone-800">
-                          {book.cover_url ? (
-                            <img
-                              src={book.cover_url}
-                              alt={`Cover of ${book.title}`}
-                              className="w-full h-full object-cover object-center"
-                              loading="lazy"
-                            />
-                          ) : (
-                            <div className="w-full h-full p-4 flex flex-col justify-between bg-stone-900 text-stone-100">
-                              <span className="text-[9px] font-mono tracking-widest uppercase text-[#FF3038] font-bold">
-                                {book.category_name || 'OpenBook'}
-                              </span>
-                              <div>
-                                <h3 className="font-serif text-sm font-bold leading-tight line-clamp-3">
-                                  {book.title}
-                                </h3>
-                                <p className="text-xs text-stone-400 mt-1 truncate">
-                                  {book.author}
-                                </p>
-                              </div>
-                              <span className="text-[10px] font-mono text-stone-500">
-                                {formatFileSize(book.file_size)}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Hardcover Spine Crease Shadow */}
-                          <div className="hardcover-spine-crease" />
-
-                          {/* Subtle Gloss Sheen */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
+                        {/* Hover Tooltip / Floating Info Panel */}
+                        <div 
+                          className={`absolute -top-16 z-30 transition-all duration-200 pointer-events-none w-48 text-center ${
+                            isHovered ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-1 scale-95 pointer-events-none'
+                          }`}
+                        >
+                          <div className="bg-[#0A120D] text-[#F7F4EE] px-3.5 py-2 rounded-xl shadow-2xl border border-[#3E5C46] text-left backdrop-blur-md">
+                            <p className="font-serif text-xs font-bold truncate text-[#F7F4EE]">
+                              {book.title}
+                            </p>
+                            <p className="text-[10px] text-[#E2BA60] truncate mt-0.5">
+                              {book.author}
+                            </p>
+                            <p className="text-[9px] text-[#8BA492] font-mono mt-1">
+                              Click to inspect volume
+                            </p>
+                          </div>
                         </div>
 
-                        {/* Realistic Drop Shadow on the Shelf Plank */}
-                        <div className="absolute inset-x-2 -bottom-2 h-4 bg-black/60 rounded-full blur-md -z-10 group-hover:scale-95 transition-transform" />
-                      </div>
+                        {/* Physical 3D Book Standing Upright (Front cover faces visitor, realistic thickness & spine) */}
+                        <div className="relative w-[115px] sm:w-[135px] md:w-[150px] lg:w-[160px] aspect-[2/3] physical-3d-book">
+                          
+                          {/* 3D Top Page Rim */}
+                          <div className="physical-book-top-edge" />
 
-                      {/* Clean Metadata Below Book */}
-                      <div className="mt-3.5 mb-2 text-center w-full px-1">
-                        <h4 className="font-serif text-xs sm:text-sm font-bold text-[#191919] group-hover:text-[#FF3038] transition-colors line-clamp-1 leading-snug">
-                          {book.title}
-                        </h4>
-                        <p className="text-[11px] text-[#626262] font-sans truncate mt-0.5">
-                          {book.author}
-                        </p>
-                      </div>
+                          {/* 3D Left Spine Edge */}
+                          <div className="physical-book-spine" />
 
+                          {/* 3D Right Page Depth Rim */}
+                          <div className="physical-book-depth" />
+
+                          {/* Front Cover Container */}
+                          <div className="relative w-full h-full rounded-r-[2px] rounded-l-[1px] overflow-hidden bg-[#18271E] shadow-xl border-t border-r border-[#4A6B53]/30">
+                            {book.cover_url ? (
+                              <img
+                                src={book.cover_url}
+                                alt={`Cover of ${book.title}`}
+                                className="w-full h-full object-cover object-center"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="w-full h-full p-3.5 flex flex-col justify-between bg-gradient-to-b from-[#1C2C22] to-[#0F1A13] text-[#F7F4EE]">
+                                <span className="text-[8px] font-mono tracking-widest uppercase text-[#E2BA60] font-bold">
+                                  {book.category_name || 'Volume'}
+                                </span>
+                                <div>
+                                  <h4 className="font-serif text-xs font-bold leading-tight line-clamp-3 text-[#F7F4EE]">
+                                    {book.title}
+                                  </h4>
+                                  <p className="text-[10px] text-[#B8C8BD] mt-1 truncate">
+                                    {book.author}
+                                  </p>
+                                </div>
+                                <span className="text-[8px] font-mono text-[#E2BA60]">
+                                  {formatFileSize(book.file_size)}
+                                </span>
+                              </div>
+                            )}
+
+                            {/* Book Spine Hinge Highlight */}
+                            <div className="book-spine-hinge-highlight" />
+                          </div>
+
+                          {/* Contact Shadow onto the Wooden Shelf Surface */}
+                          <div className="book-shelf-contact-shadow" />
+                        </div>
+
+                        {/* Strictly NO title or author text underneath covers */}
+                      </div>
+                    );
+                  })}
+
+                  {/* Subtle Tasteful Decorative Object on Shelf */}
+                  {tier.hasDecoration === 'plant' && (
+                    <div className="shrink-0 flex flex-col items-center select-none pointer-events-none pb-0 ml-3" aria-hidden="true">
+                      <div className="relative w-10 sm:w-12 h-14 flex flex-col items-center justify-end">
+                        <div className="relative w-7 h-8 flex items-center justify-center -mb-1">
+                          <div className="absolute -top-3 left-1 w-2.5 h-4 bg-[#699E75] rounded-full rotate-[-25deg] shadow-sm" />
+                          <div className="absolute -top-4 left-3 w-2.5 h-5 bg-[#4F805A] rounded-full shadow-sm" />
+                          <div className="absolute -top-2.5 right-1 w-2.5 h-4 bg-[#7FB08B] rounded-full rotate-[30deg] shadow-sm" />
+                          <div className="w-6 h-6 bg-[#2B3E32] border border-[#486352] rounded-b-md shadow-md flex items-center justify-center">
+                            <div className="w-4 h-0.5 bg-[#E2BA60]/50 rounded-full" />
+                          </div>
+                        </div>
+                        <div className="w-6 h-2 bg-black/40 rounded-full blur-[2px] mt-0.5" />
+                      </div>
                     </div>
-                  );
-                })}
+                  )}
+
+                  {tier.hasDecoration === 'vase' && (
+                    <div className="shrink-0 flex flex-col items-center select-none pointer-events-none pb-0 ml-3" aria-hidden="true">
+                      <div className="relative w-8 sm:w-10 h-16 flex flex-col items-center justify-end">
+                        <div className="relative w-5 h-12 flex flex-col items-center justify-end">
+                          <div className="w-0.5 h-6 bg-[#C99E42] rounded-full" />
+                          <div className="w-1.5 h-2 bg-[#E2BA60] rounded-full -mt-5 -ml-2 rotate-[-45deg]" />
+                          <div className="w-4 h-8 bg-[#2A3F31] border border-[#4A6954] rounded-t-sm rounded-b-md shadow-md" />
+                        </div>
+                        <div className="w-5 h-2 bg-black/40 rounded-full blur-[2px] mt-0.5" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* The Physical Thin Wooden Bookshelf Plank with Warm Lighting */}
+                <div className="physical-wood-shelf -mt-1" />
               </div>
 
-              {/* Handcrafted Wooden Shelf Plank */}
-              <div className="wood-shelf-plank rounded-b-2xl -mx-4 sm:-mx-8" />
             </div>
           ))}
         </div>

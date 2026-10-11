@@ -15,56 +15,56 @@ export const Footer: React.FC<FooterProps> = ({
   onNavigateAdmin
 }) => {
   return (
-    <footer className="mt-24 border-t border-stone-200/90 bg-[#FAFAF8] text-[#626262] text-xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+    <footer className="mt-20 border-t border-[#EAEAE6] bg-[#F7F7F3] text-[#777777] text-xs">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
         {/* Main Footer Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
           
           {/* Column 1: Brand & Mission */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#FF3038] text-white flex items-center justify-center shrink-0 shadow-xs">
-                <Library className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-lg bg-[#262626] text-[#FCFCFA] flex items-center justify-center shrink-0 shadow-2xs">
+                <Library className="w-4 h-4 text-[#F5E8AE]" />
               </div>
               <div className="flex flex-col">
-                <span className="font-serif text-xl font-black tracking-tight text-[#191919] leading-none">
+                <span className="font-serif text-xl font-black tracking-tight text-[#262626] leading-none">
                   OpenBook
                 </span>
-                <span className="text-[9px] tracking-[0.2em] font-bold text-[#FF3038] uppercase mt-0.5">
+                <span className="text-[9px] tracking-[0.2em] font-medium text-[#777777] uppercase mt-0.5 font-sans">
                   Digital Library
                 </span>
               </div>
             </div>
             
-            <p className="text-[#626262] leading-relaxed text-xs">
+            <p className="text-[#777777] leading-relaxed text-xs">
               A free open-access public bookstore and digital repository. Dedicated to universal access to knowledge through instant in-browser reading and complete, unabridged PDF downloads.
             </p>
 
-            <div className="pt-1 flex items-center gap-2 text-[11px] text-stone-500 font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+            <div className="pt-1 flex items-center gap-2 text-[11px] text-[#777777] font-mono">
+              <span className="w-2 h-2 rounded-full bg-[#E8D58B]" />
               <span>Multi-Region Cloud Verified</span>
             </div>
           </div>
 
           {/* Column 2: Catalog Navigation */}
           <div className="space-y-3">
-            <h4 className="font-sans font-bold text-[#191919] uppercase tracking-wider text-[11px]">
+            <h4 className="font-sans font-bold text-[#262626] uppercase tracking-wider text-[11px]">
               Explore Collection
             </h4>
             <ul className="space-y-2.5">
               <li>
-                <button onClick={onNavigateHome} className="hover:text-[#FF3038] transition-colors cursor-pointer">
+                <button onClick={onNavigateHome} className="hover:text-[#262626] transition-colors cursor-pointer">
                   Bookstore Front Page
                 </button>
               </li>
               <li>
-                <button onClick={onNavigateBooks} className="hover:text-[#FF3038] transition-colors cursor-pointer">
+                <button onClick={onNavigateBooks} className="hover:text-[#A47750] transition-colors cursor-pointer">
                   Browse All Titles
                 </button>
               </li>
               <li>
-                <button onClick={onNavigateCategories} className="hover:text-[#FF3038] transition-colors cursor-pointer">
+                <button onClick={onNavigateCategories} className="hover:text-[#A47750] transition-colors cursor-pointer">
                   Subject Categories
                 </button>
               </li>

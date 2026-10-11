@@ -131,47 +131,244 @@
 }
 
 /* =========================================================================
-   BOLD RED HERO & OVERLAPPING 3D BOOKS STYLING
+   MODERN READING SANCTUARY: FLOATING OAK SHELVES & 3D BOOK INSTALLATION
    ========================================================================= */
 
-.hero-red-circle {
-  background: #FF3038;
-  border-radius: 9999px;
-  box-shadow: 0 30px 80px -15px rgba(255, 48, 56, 0.4);
+/* Hero 3D Book Installation: Gentle restrained float animation */
+@keyframes sanctuary-float-center {
+  0%, 100% {
+    transform: translateY(0px) rotateY(-4deg) rotateX(2deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateY(-4deg) rotateX(2deg);
+  }
 }
 
-.hero-book-rear {
-  transform: rotate(-8deg) translateY(-12px) translateX(-10px);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: -15px 25px 45px -10px rgba(0, 0, 0, 0.45);
+@keyframes sanctuary-float-left {
+  0%, 100% {
+    transform: translateY(0px) rotate(-8deg) rotateY(6deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(-8deg) rotateY(6deg);
+  }
 }
 
-.hero-book-rear:hover {
-  transform: rotate(-6deg) translateY(-20px) translateX(-10px) scale(1.02);
-  box-shadow: -20px 35px 55px -10px rgba(0, 0, 0, 0.52);
+@keyframes sanctuary-float-right {
+  0%, 100% {
+    transform: translateY(0px) rotate(8deg) rotateY(-6deg);
+  }
+  50% {
+    transform: translateY(-7px) rotate(8deg) rotateY(-6deg);
+  }
 }
 
-.hero-book-front {
-  transform: rotate(4deg) translateY(14px) translateX(25px);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 20px 30px 50px -10px rgba(0, 0, 0, 0.45);
+.hero-book-3d-center {
+  animation: sanctuary-float-center 7s ease-in-out infinite;
+  transform-style: preserve-3d;
+  box-shadow: 0 25px 50px -10px rgba(38, 36, 31, 0.35), 0 10px 20px -5px rgba(38, 36, 31, 0.2);
 }
 
-.hero-book-front:hover {
-  transform: rotate(2deg) translateY(6px) translateX(25px) scale(1.02);
-  box-shadow: 25px 40px 60px -10px rgba(0, 0, 0, 0.52);
+.hero-book-3d-left {
+  animation: sanctuary-float-left 8s ease-in-out infinite 0.5s;
+  transform-style: preserve-3d;
+  box-shadow: -15px 20px 40px -10px rgba(38, 36, 31, 0.3);
 }
 
-/* Upright Books on Realistic Wooden Shelves */
-.shelf-book-stand {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+.hero-book-3d-right {
+  animation: sanctuary-float-right 7.5s ease-in-out infinite 1s;
+  transform-style: preserve-3d;
+  box-shadow: 15px 20px 40px -10px rgba(38, 36, 31, 0.3);
+}
+
+/* =========================================================================
+   FLOATING CREAM SHELVES & PHYSICAL 3D BOOKS (REFERENCE IMAGE 2 SPEC)
+   ========================================================================= */
+
+/* The floating shelf is a long, thin, horizontal platform with a subtle warm yellow or cream tone */
+.floating-cream-shelf {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: #E8D58B; /* Shelf front surface */
+  border-radius: 2px;
+  box-shadow: 
+    0 8px 18px rgba(50, 40, 20, 0.10),
+    0 2px 4px rgba(50, 40, 20, 0.06);
+}
+
+/* Shelf top surface: pale warm cream with subtle perspective angle */
+.floating-cream-shelf::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: #F5E8AE; /* Shelf top surface */
+  transform: perspective(500px) rotateX(40deg);
+  transform-origin: bottom;
+  border-top: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.7);
+}
+
+/* Shelf bottom soft shadow cast onto the wall below */
+.floating-cream-shelf::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 1%;
+  right: 1%;
+  height: 16px;
+  background: linear-gradient(180deg, rgba(50, 40, 20, 0.12) 0%, rgba(50, 40, 20, 0.03) 60%, transparent 100%);
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+/* Thin Wooden Physical Library Bookshelf */
+.physical-wood-shelf {
+  position: relative;
+  width: 100%;
+  height: 14px;
+  background: linear-gradient(180deg, #422915 0%, #2E1B0D 50%, #1F1208 100%);
+  border-radius: 2px;
+  border-bottom: 1px solid #140A04;
+  box-shadow: 
+    0 12px 24px rgba(0, 0, 0, 0.65),
+    0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.physical-wood-shelf::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(90deg, #382211 0%, #54341B 25%, #6E4424 50%, #54341B 75%, #382211 100%);
+  transform: perspective(500px) rotateX(42deg);
+  transform-origin: bottom;
+  border-top: 1px solid rgba(226, 186, 96, 0.25);
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.15);
+}
+
+.physical-wood-shelf::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.2) 60%, transparent 100%);
+  pointer-events: none;
+  filter: blur(3px);
+}
+
+/* Physical 3D Book Standing Upright on Shelf */
+.physical-3d-book {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   transform-origin: bottom center;
-  box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.45), -2px 0 5px rgba(0, 0, 0, 0.2);
 }
 
-.shelf-book-stand:hover {
-  transform: translateY(-12px) scale(1.03);
-  box-shadow: 0 22px 30px -5px rgba(0, 0, 0, 0.55), -4px 0 8px rgba(0, 0, 0, 0.25);
+/* Book Hover State: lifts gently upward, moves slightly toward viewer, subtle 3D rotation */
+.physical-3d-book:hover {
+  transform: translateY(-12px) translateZ(10px) rotateY(-5deg);
+  z-index: 25;
+}
+
+/* Contact shadow where the book touches the shelf */
+.book-shelf-contact-shadow {
+  position: absolute;
+  bottom: -4px;
+  left: 6px;
+  right: 4px;
+  height: 8px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(40, 30, 15, 0.35) 0%, rgba(40, 30, 15, 0.12) 60%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(2px);
+  pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.physical-3d-book:hover .book-shelf-contact-shadow {
+  transform: scale(0.9) translateY(4px);
+  opacity: 0.45;
+}
+
+/* Book Spine on the Left */
+.physical-book-spine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  width: 6px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.15) 60%, rgba(255, 255, 255, 0.1) 100%);
+  transform: rotateY(-70deg);
+  transform-origin: right center;
+  border-radius: 1px 0 0 1px;
+  pointer-events: none;
+}
+
+/* Book Page Stack Depth on the Right */
+.physical-book-depth {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  right: -5px;
+  width: 5px;
+  background: linear-gradient(90deg, #F3EFE6 0%, #E5DFD1 60%, #CCC5B5 100%);
+  border-right: 1px solid #C4BDAC;
+  box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.15);
+  transform: skewY(12deg);
+  transform-origin: left top;
+  pointer-events: none;
+}
+
+/* Top page rim */
+.physical-book-top-edge {
+  position: absolute;
+  top: -4px;
+  left: 2px;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(180deg, #FAF7F0 0%, #EBE5D8 100%);
+  transform: skewX(45deg);
+  transform-origin: left bottom;
+  box-shadow: inset 0 0 1px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+/* Soft ambient lighting highlight along spine hinge */
+.book-spine-hinge-highlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 14px;
+  background: linear-gradient(90deg, 
+    rgba(0, 0, 0, 0.35) 0%, 
+    rgba(0, 0, 0, 0.08) 35%, 
+    rgba(255, 255, 255, 0.22) 55%, 
+    rgba(0, 0, 0, 0.18) 75%, 
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+.sanctuary-book .book-spotlight-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.3) 50%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.sanctuary-book:hover .book-spotlight-sheen {
+  opacity: 1;
 }
 
 

@@ -179,7 +179,7 @@ export default function App() {
     : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-[#191919] font-sans selection:bg-red-100 selection:text-red-900">
+    <div className="min-h-screen flex flex-col bg-[#FCFCFA] text-[#262626] font-sans selection:bg-[#F5E8AE] selection:text-[#262626]">
       
       {/* Toast Notification */}
       {toast && (
