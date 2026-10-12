@@ -126,8 +126,12 @@ export const BookForm: React.FC<BookFormProps> = ({
       if (metadata.description && metadata.description.trim()) {
         setDescription(metadata.description.trim());
         setDescriptionNotice(null);
+      } else if (metadata.descriptionError) {
+        setDescriptionNotice(metadata.descriptionError);
+      } else if (metadata.isScanned) {
+        setDescriptionNotice('This PDF appears to be a scanned document without extractable text. Please enter a description manually.');
       } else {
-        setDescriptionNotice('Automatic description generation was unsuccessful. Please enter a description manually.');
+        setDescriptionNotice('Could not generate description automatically. You may enter one manually or click "Generate Description".');
       }
 
       // Check if duplicate detected
@@ -136,8 +140,15 @@ export const BookForm: React.FC<BookFormProps> = ({
       }
     } catch (err: any) {
       console.warn('Metadata analysis warning:', err);
+      const errMsg = err?.message || '';
       setNotice('We couldn’t automatically detect all book information. Please review and fill the fields manually.');
-      setDescriptionNotice('Automatic description generation was unsuccessful. Please enter a description manually.');
+      if (errMsg.includes('scanned')) {
+        setDescriptionNotice('This PDF appears to be a scanned document without extractable digital text.');
+      } else if (errMsg.includes('not configured')) {
+        setDescriptionNotice('AI description service is not configured. Please check GEMINI_API_KEY.');
+      } else {
+        setDescriptionNotice(errMsg || 'Automatic description generation was unsuccessful. Please enter a description manually.');
+      }
       
       // Fallback: auto-suggest clean title from filename if title field is currently blank
       if (!title.trim()) {
@@ -175,11 +186,12 @@ export const BookForm: React.FC<BookFormProps> = ({
         setDescription(generated.trim());
         setDescriptionNotice(null);
       } else {
-        setDescriptionNotice('Automatic description generation was unsuccessful. Please enter a description manually.');
+        setDescriptionNotice('Could not generate a book description. Please enter one manually.');
       }
     } catch (err: any) {
       console.warn('Regenerate description error:', err);
-      setDescriptionNotice('Automatic description generation was unsuccessful. Please enter a description manually.');
+      const errMsg = err?.message || 'Automatic description generation was unsuccessful. Please try again or enter manually.';
+      setDescriptionNotice(errMsg);
     } finally {
       setIsRegeneratingDesc(false);
     }

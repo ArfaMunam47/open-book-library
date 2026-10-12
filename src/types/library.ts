@@ -45,6 +45,8 @@ export interface DetectedBookMetadata {
   fileSize: number;
   isDuplicate?: boolean;
   duplicateReason?: string;
+  isScanned?: boolean;
+  descriptionError?: string;
 }
 
 export interface AdminStats {

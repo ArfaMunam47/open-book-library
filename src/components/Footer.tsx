@@ -15,7 +15,7 @@ export const Footer: React.FC<FooterProps> = ({
   onNavigateAdmin
 }) => {
   return (
-    <footer className="mt-20 border-t border-[#EAEAE6] bg-[#F7F7F3] text-[#777777] text-xs">
+    <footer className="mt-20 border-t border-[#E5DEC9] bg-[#F8F5E9] text-[#526058] text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         
         {/* Main Footer Columns */}
@@ -24,25 +24,25 @@ export const Footer: React.FC<FooterProps> = ({
           {/* Column 1: Brand & Mission */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-[#262626] text-[#FCFCFA] flex items-center justify-center shrink-0 shadow-2xs">
-                <Library className="w-4 h-4 text-[#F5E8AE]" />
+              <div className="w-8 h-8 rounded-lg bg-[#153C32] text-[#F8F5E9] flex items-center justify-center shrink-0 shadow-xs">
+                <BookOpen className="w-4 h-4 text-[#C76A32]" />
               </div>
               <div className="flex flex-col">
-                <span className="font-serif text-xl font-black tracking-tight text-[#262626] leading-none">
+                <span className="font-serif text-xl font-bold tracking-tight text-[#153C32] leading-none">
                   OpenBook
                 </span>
-                <span className="text-[9px] tracking-[0.2em] font-medium text-[#777777] uppercase mt-0.5 font-sans">
+                <span className="text-[9px] tracking-[0.2em] font-medium text-[#526058] uppercase mt-0.5 font-sans">
                   Digital Library
                 </span>
               </div>
             </div>
             
-            <p className="text-[#777777] leading-relaxed text-xs">
-              A free open-access public bookstore and digital repository. Dedicated to universal access to knowledge through instant in-browser reading and complete, unabridged PDF downloads.
+            <p className="text-[#526058] leading-relaxed text-xs">
+              A free open-access digital library and public repository. Dedicated to universal access to knowledge through instant in-browser reading and complete, unabridged PDF downloads.
             </p>
 
-            <div className="pt-1 flex items-center gap-2 text-[11px] text-[#777777] font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#E8D58B]" />
+            <div className="pt-1 flex items-center gap-2 text-[11px] text-[#526058] font-mono">
+              <span className="w-2 h-2 rounded-full bg-[#C76A32]" />
               <span>Multi-Region Cloud Verified</span>
             </div>
           </div>

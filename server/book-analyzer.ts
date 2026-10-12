@@ -20,17 +20,20 @@ export interface DetectedBookMetadata {
   fileSize: number;
   isDuplicate?: boolean;
   duplicateReason?: string;
+  isScanned?: boolean;
+  descriptionError?: string;
 }
 
 /**
- * Extracts text from the first several bibliographic pages of a PDF (cover, title page, copyright, TOC).
+ * Extracts text from the first several bibliographic and substantive pages of a PDF (cover, title page, copyright, TOC, and initial chapters).
  */
-async function extractBibliographicPages(filePath: string, maxPages: number = 10): Promise<{
+async function extractBibliographicPages(filePath: string, maxPages: number = 25): Promise<{
   pagesText: string;
   pageCount: number;
   fileSize: number;
   pdfTitle?: string;
   pdfAuthor?: string;
+  isScanned: boolean;
 }> {
   const stats = fs.statSync(filePath);
   const fileSize = stats.size;
@@ -50,6 +53,7 @@ async function extractBibliographicPages(filePath: string, maxPages: number = 10
   }
 
   let pagesText = '';
+  let nonBlankPages = 0;
   try {
     const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf.mjs');
     const uint8 = new Uint8Array(buffer);
@@ -61,6 +65,7 @@ async function extractBibliographicPages(filePath: string, maxPages: number = 10
     }).promise;
     pageCount = doc.numPages;
 
+    // Scan up to maxPages to collect bibliographic and content pages (TOC, preface, intro, chap 1)
     const pagesToRead = Math.min(doc.numPages, maxPages);
     for (let i = 1; i <= pagesToRead; i++) {
       try {
@@ -73,6 +78,7 @@ async function extractBibliographicPages(filePath: string, maxPages: number = 10
           .trim();
 
         if (str.length > 0) {
+          nonBlankPages++;
           pagesText += `\n--- PAGE ${i} ---\n${str}\n`;
         }
       } catch (pageErr) {
@@ -83,12 +89,16 @@ async function extractBibliographicPages(filePath: string, maxPages: number = 10
     console.warn('pdfjs-dist text extraction note:', err);
   }
 
+  // Detect if PDF has no extractable text (e.g. image-only or scanned PDF)
+  const isScanned = pageCount > 0 && pagesText.trim().length < 40;
+
   return {
     pagesText,
     pageCount,
     fileSize,
     pdfTitle,
-    pdfAuthor
+    pdfAuthor,
+    isScanned
   };
 }
 
@@ -132,7 +142,6 @@ function heuristicExtraction(
 
   // 1. Author heuristics
   if (author === 'Unknown Author') {
-    // Look for "By Author Name"
     const byMatch = pagesText.match(/\b(?:by|written by|author:?)\s+([A-Z][a-zA-Z\.\s]{2,40})/i);
     if (byMatch && byMatch[1]) {
       author = byMatch[1].trim();
@@ -213,13 +222,13 @@ function heuristicExtraction(
 }
 
 /**
- * Executes a Gemini request with automatic retry for transient 503/429 errors,
- * 15-second timeout, and seamless fallback between models.
+ * Executes a Gemini request with model fallback cascade and retry for transient errors.
+ * Prioritizes high-availability production models ('gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite').
  */
 async function executeGeminiWithRetry<T>(
   action: (ai: GoogleGenAI, model: string) => Promise<T>,
-  models: string[] = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite'],
-  timeoutMs: number = 15000
+  models: string[] = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'],
+  timeoutMs: number = 25000
 ): Promise<T | null> {
   if (!process.env.GEMINI_API_KEY) return null;
   const ai = new GoogleGenAI();
@@ -237,15 +246,14 @@ async function executeGeminiWithRetry<T>(
       } catch (err: any) {
         const errMsg = String(err?.message || err || '');
         const status = err?.status || (errMsg.includes('503') ? 503 : (errMsg.includes('429') ? 429 : null));
-        const isTransient = status === 503 || status === 429 || errMsg.includes('Timeout') || errMsg.includes('overloaded');
+        const isTransient = status === 503 || status === 429 || errMsg.includes('Timeout') || errMsg.includes('overloaded') || errMsg.includes('high demand');
 
         if (isTransient && attempt === 1) {
-          // Brief pause before retry on transient network or capacity blip
-          await new Promise(r => setTimeout(r, 800));
+          await new Promise(r => setTimeout(r, 600));
           continue;
         }
 
-        // Move to the next model fallback
+        // On error or model unreachability, proceed to next model in the cascade
         break;
       }
     }
@@ -256,13 +264,13 @@ async function executeGeminiWithRetry<T>(
 
 /**
  * Primary analysis entrypoint: extracts pages, queries Gemini with automatic model failover,
- * and falls back to deterministic heuristic extraction if API is unavailable.
+ * and falls back to deterministic heuristic extraction if AI model is unavailable.
  */
 export async function analyzeBook(
   filePath: string,
   originalFilename: string = ''
 ): Promise<DetectedBookMetadata> {
-  const { pagesText, pageCount, fileSize, pdfTitle, pdfAuthor } = await extractBibliographicPages(filePath);
+  const { pagesText, pageCount, fileSize, pdfTitle, pdfAuthor, isScanned } = await extractBibliographicPages(filePath, 25);
   const categories = db.getCategories();
 
   let detected: {
@@ -277,16 +285,26 @@ export async function analyzeBook(
     description?: string;
     confidence: 'High' | 'Medium' | 'Low';
     reasoning?: string;
+    descriptionError?: string;
   } | null = null;
 
-  // Attempt AI detection if API key is configured
+  let descriptionFailureReason: string | undefined;
+
+  // Check if PDF has no extractable text (e.g. image-only or scanned PDF)
+  if (isScanned) {
+    descriptionFailureReason = 'This PDF contains scanned images without extractable digital text. Please enter a description manually.';
+  } else if (!process.env.GEMINI_API_KEY) {
+    descriptionFailureReason = 'Gemini AI API key is not configured in environment variables.';
+  }
+
+  // Attempt AI detection if API key is configured and readable text exists
   if (process.env.GEMINI_API_KEY && pagesText.trim().length > 20) {
     const categoryListStr = categories
       .map(c => `- ${c.id}: ${c.name} (${c.description || ''})`)
       .join('\n');
 
     const prompt = `You are a professional cataloging librarian and bibliographer.
-Analyze the following extracted bibliographic text from the first pages of a book (cover, title page, copyright, table of contents).
+Analyze the following extracted bibliographic text from the first pages of a book (cover, title page, copyright, table of contents, introduction).
 
 Detect:
 1. "title": Exact book title (and subtitle if prominent).
@@ -305,7 +323,7 @@ EXISTING LIBRARY CATEGORIES:
 ${categoryListStr}
 
 BOOK EXTRACT:
-${pagesText.substring(0, 5000)}
+${pagesText.substring(0, 6000)}
 
 Return strictly JSON matching this structure:
 {
@@ -376,9 +394,11 @@ Return strictly JSON matching this structure:
       });
       if (generated && generated.trim().length > 20) {
         detected.description = generated.trim();
+        descriptionFailureReason = undefined;
       }
-    } catch {
-      // Gracefully continue without description
+    } catch (e: any) {
+      console.warn('Second-pass description generation error:', e);
+      descriptionFailureReason = 'The AI service could not complete the synopsis request. Please try the "Generate Description" button.';
     }
   }
 
@@ -390,7 +410,9 @@ Return strictly JSON matching this structure:
     pageCount,
     fileSize,
     isDuplicate: duplicateCheck.isDuplicate,
-    duplicateReason: duplicateCheck.reason
+    duplicateReason: duplicateCheck.reason,
+    isScanned,
+    descriptionError: !detected.description ? descriptionFailureReason : undefined
   };
 }
 
@@ -405,10 +427,20 @@ export async function generateBookDescription(params: {
 }): Promise<string> {
   const { pdfPath, title, author, categoryName } = params;
 
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('Description generation is not configured. Missing GEMINI_API_KEY in environment variables.');
+  }
+
   let bookContext = '';
+  let isScanned = false;
   if (pdfPath && fs.existsSync(pdfPath)) {
-    const { pagesText } = await extractBibliographicPages(pdfPath, 10);
-    bookContext = pagesText.substring(0, 6000);
+    const { pagesText, isScanned: scannedFlag } = await extractBibliographicPages(pdfPath, 25);
+    bookContext = pagesText.substring(0, 7000);
+    isScanned = scannedFlag;
+  }
+
+  if (pdfPath && isScanned && (!title || title === 'Unknown Title')) {
+    throw new Error('This PDF appears to be a scanned document without extractable text.');
   }
 
   const prompt = `You are a professional cataloging librarian.
@@ -427,24 +459,21 @@ Guidelines:
 4. Do NOT include chapter-by-chapter breakdowns or spoilers.
 5. Target approximately 50 to 90 words.`;
 
-  if (process.env.GEMINI_API_KEY) {
-    const generated = await executeGeminiWithRetry(async (ai, model) => {
-      const res = await ai.models.generateContent({
-        model,
-        contents: prompt,
-        config: { temperature: 0.2 }
-      });
-      if (res.text && res.text.trim().length > 20) {
-        return res.text.trim();
-      }
-      return null;
+  const generated = await executeGeminiWithRetry(async (ai, model) => {
+    const res = await ai.models.generateContent({
+      model,
+      contents: prompt,
+      config: { temperature: 0.2 }
     });
-
-    if (generated) {
-      return generated;
+    if (res.text && res.text.trim().length > 20) {
+      return res.text.trim();
     }
+    return null;
+  });
+
+  if (generated) {
+    return generated;
   }
 
-  // Return empty string if generation was unsuccessful (do NOT invent generic fake descriptions)
-  return '';
+  throw new Error('The AI service is temporarily experiencing high demand. Please try clicking "Generate Description" again.');
 }
