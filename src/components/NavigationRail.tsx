@@ -1,15 +1,12 @@
 import React from 'react';
 import { ActiveView } from '../types/library';
 import { 
-  Library, 
   Compass, 
   Layers, 
   BookOpen, 
-  Calendar, 
   ShieldCheck, 
   Info, 
-  Sparkles,
-  Bookmark
+  Sparkles
 } from 'lucide-react';
 
 interface NavigationRailProps {
@@ -36,153 +33,154 @@ export const NavigationRail: React.FC<NavigationRailProps> = ({
 
   return (
     <>
-      {/* Desktop Narrow Vertical Rail (Hidden on mobile/tablet) */}
+      {/* Desktop Refined Sidebar (Sticky along content on lg+ screens) */}
       <aside 
-        aria-label="Reading Room Navigation"
-        className="hidden lg:flex flex-col justify-between w-20 xl:w-24 bg-[#1E1813] text-stone-200 border-r border-[#382D24] shrink-0 sticky top-0 h-screen z-40 select-none shadow-xl"
+        aria-label="OpenBook Sidebar Navigation"
+        className="hidden lg:flex flex-col justify-between w-64 bg-[#FFF9F1] text-[#10243B] border-r border-[#F0E5D8] shrink-0 sticky top-0 h-screen z-30 select-none shadow-xs"
       >
-        {/* Top: Brand Emblem */}
-        <div className="pt-6 pb-4 flex flex-col items-center border-b border-[#2E241C]">
+        {/* Top: OpenBook Logo */}
+        <div className="p-6 border-b border-[#F0E5D8]">
           <button
             onClick={() => onNavigate({ type: 'home' })}
-            className="group flex flex-col items-center gap-1.5 focus:outline-none cursor-pointer"
+            className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer"
             title="OpenBook Digital Library"
           >
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-700 via-amber-800 to-stone-900 border border-amber-600/40 flex items-center justify-center text-amber-100 shadow-md group-hover:scale-105 group-hover:border-amber-400/60 transition-all">
-              <Library className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#F1262D] text-white flex items-center justify-center shadow-xs group-hover:scale-105 transition-transform">
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
-            <span className="text-[10px] font-serif tracking-widest uppercase text-amber-200/80 font-bold group-hover:text-amber-300">
-              OpenBook
-            </span>
+            <div className="flex flex-col">
+              <span className="font-serif text-xl font-bold tracking-tight text-[#10243B] leading-none">
+                OpenBook
+              </span>
+              <span className="text-[9px] tracking-[0.2em] font-semibold text-[#77736E] uppercase font-sans mt-1">
+                DIGITAL LIBRARY
+              </span>
+            </div>
           </button>
         </div>
 
-        {/* Center: Navigation Actions */}
-        <nav className="flex-1 py-6 flex flex-col items-center gap-4 overflow-y-auto">
-          {/* 1. Reading Room (Home) */}
+        {/* Center: Navigation Links */}
+        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {/* 1. Library Home */}
           <button
             onClick={() => onNavigate({ type: 'home' })}
-            className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all cursor-pointer ${
               isHome 
-                ? 'bg-amber-900/60 text-amber-200 border border-amber-600/50 shadow-inner' 
-                : 'text-stone-400 hover:text-stone-100 hover:bg-[#2A221A]'
+                ? 'bg-[#FFDDD5] text-[#F1262D] font-bold shadow-2xs' 
+                : 'text-[#10243B] hover:text-[#F1262D] hover:bg-[#FFF4E8] font-medium'
             }`}
-            title="Reading Room (Home)"
           >
-            <BookOpen className="w-5 h-5" />
-            <span className="text-[9px] font-medium tracking-tight">Room</span>
+            <BookOpen className={`w-4 h-4 ${isHome ? 'text-[#F1262D]' : 'text-[#77736E]'}`} />
+            <span>Library Home</span>
           </button>
 
-          {/* 2. Full Catalog */}
+          {/* 2. Browse Books */}
           <button
             onClick={() => onNavigate({ type: 'books' })}
-            className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all cursor-pointer ${
               isBooks 
-                ? 'bg-amber-900/60 text-amber-200 border border-amber-600/50 shadow-inner' 
-                : 'text-stone-400 hover:text-stone-100 hover:bg-[#2A221A]'
+                ? 'bg-[#FFDDD5] text-[#F1262D] font-bold shadow-2xs' 
+                : 'text-[#10243B] hover:text-[#F1262D] hover:bg-[#FFF4E8] font-medium'
             }`}
-            title="Catalog & Books"
           >
-            <Compass className="w-5 h-5" />
-            <span className="text-[9px] font-medium tracking-tight">Catalog</span>
+            <Compass className={`w-4 h-4 ${isBooks ? 'text-[#F1262D]' : 'text-[#77736E]'}`} />
+            <span>Browse Books</span>
           </button>
 
-          {/* 3. Categories & Shelves */}
+          {/* 3. Categories */}
           <button
             onClick={() => onNavigate({ type: 'categories' })}
-            className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all cursor-pointer ${
               isCategories 
-                ? 'bg-amber-900/60 text-amber-200 border border-amber-600/50 shadow-inner' 
-                : 'text-stone-400 hover:text-stone-100 hover:bg-[#2A221A]'
+                ? 'bg-[#FFDDD5] text-[#F1262D] font-bold shadow-2xs' 
+                : 'text-[#10243B] hover:text-[#F1262D] hover:bg-[#FFF4E8] font-medium'
             }`}
-            title="Subjects & Shelves"
           >
-            <Layers className="w-5 h-5" />
-            <span className="text-[9px] font-medium tracking-tight">Shelves</span>
+            <Layers className={`w-4 h-4 ${isCategories ? 'text-[#F1262D]' : 'text-[#77736E]'}`} />
+            <span>Categories</span>
           </button>
 
-          {/* 4. 3D Shelf direct jump */}
+          {/* 4. Optional 3D Shelf direct jump (when on Home) */}
           {isHome && onScrollToShelf && (
             <button
               onClick={onScrollToShelf}
-              className="w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 text-amber-400/90 hover:text-amber-200 hover:bg-[#2A221A] transition-all cursor-pointer"
-              title="Browse 3D Bookshelf"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-[#77736E] hover:text-[#F1262D] hover:bg-[#FFF4E8] font-medium transition-all cursor-pointer"
             >
-              <Sparkles className="w-5 h-5 text-amber-400" />
-              <span className="text-[9px] font-medium tracking-tight">3D Shelf</span>
+              <Sparkles className="w-4 h-4 text-[#F1262D]" />
+              <span>Wooden Shelf</span>
             </button>
           )}
 
-          {/* 5. Librarian Portal */}
+          {/* 5. Administrator Portal */}
           <button
             onClick={() => onNavigate(isAdmin ? { type: 'admin' } : { type: 'admin-login' })}
-            className={`w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all cursor-pointer ${
               isAdminView 
-                ? 'bg-amber-900/60 text-amber-200 border border-amber-600/50 shadow-inner' 
-                : 'text-stone-400 hover:text-stone-100 hover:bg-[#2A221A]'
+                ? 'bg-[#FFDDD5] text-[#F1262D] font-bold shadow-2xs' 
+                : 'text-[#10243B] hover:text-[#F1262D] hover:bg-[#FFF4E8] font-medium'
             }`}
-            title={isAdmin ? 'Librarian Dashboard' : 'Admin Login'}
           >
-            <ShieldCheck className="w-5 h-5" />
-            <span className="text-[9px] font-medium tracking-tight">Admin</span>
+            <ShieldCheck className={`w-4 h-4 ${isAdminView ? 'text-[#F1262D]' : 'text-[#77736E]'}`} />
+            <span>{isAdmin ? 'Admin Dashboard' : 'Admin Login'}</span>
           </button>
         </nav>
 
-        {/* Bottom Rail Actions */}
-        <div className="pb-6 pt-3 flex flex-col items-center gap-3 border-t border-[#2E241C]">
+        {/* Bottom Area: Info & Catalog Status */}
+        <div className="p-4 border-t border-[#F0E5D8] flex items-center justify-between text-xs text-[#77736E]">
           <button
             onClick={onOpenAbout}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-stone-400 hover:text-stone-100 hover:bg-[#2A221A] transition-colors cursor-pointer"
+            className="flex items-center gap-2 text-xs text-[#77736E] hover:text-[#F1262D] p-1 rounded-lg transition-colors cursor-pointer"
             title="About OpenBook Library"
           >
             <Info className="w-4 h-4" />
+            <span>About Library</span>
           </button>
           
-          <div className="text-[10px] font-mono text-amber-300/70 font-semibold" title={`${totalBooks} Volumes in Library`}>
-            {totalBooks} vol.
-          </div>
+          <span className="font-mono text-[11px] font-semibold text-[#10243B]/80 bg-[#FFF4E8] px-2.5 py-1 rounded-md border border-[#F0E5D8]">
+            {totalBooks} vols
+          </span>
         </div>
       </aside>
 
-      {/* Mobile / Tablet Bottom Navigation Bar */}
+      {/* Mobile Bottom Navigation Bar */}
       <nav 
         aria-label="Mobile Navigation"
-        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#1E1813]/95 backdrop-blur-md border-t border-[#382D24] py-2 px-4 flex items-center justify-around shadow-2xl"
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#FFF9F1]/95 backdrop-blur-md border-t border-[#F0E5D8] py-2 px-4 flex items-center justify-around shadow-lg"
       >
         <button
           onClick={() => onNavigate({ type: 'home' })}
-          className={`flex flex-col items-center gap-1 p-1 cursor-pointer ${
-            isHome ? 'text-amber-300' : 'text-stone-400 hover:text-stone-200'
+          className={`flex flex-col items-center gap-1 p-1.5 rounded-lg cursor-pointer ${
+            isHome ? 'text-[#F1262D] font-bold' : 'text-[#77736E] hover:text-[#10243B]'
           }`}
         >
           <BookOpen className="w-4 h-4" />
-          <span className="text-[10px]">Room</span>
+          <span className="text-[10px]">Home</span>
         </button>
 
         <button
           onClick={() => onNavigate({ type: 'books' })}
-          className={`flex flex-col items-center gap-1 p-1 cursor-pointer ${
-            isBooks ? 'text-amber-300' : 'text-stone-400 hover:text-stone-200'
+          className={`flex flex-col items-center gap-1 p-1.5 rounded-lg cursor-pointer ${
+            isBooks ? 'text-[#F1262D] font-bold' : 'text-[#77736E] hover:text-[#10243B]'
           }`}
         >
           <Compass className="w-4 h-4" />
-          <span className="text-[10px]">Catalog</span>
+          <span className="text-[10px]">Browse</span>
         </button>
 
         <button
           onClick={() => onNavigate({ type: 'categories' })}
-          className={`flex flex-col items-center gap-1 p-1 cursor-pointer ${
-            isCategories ? 'text-amber-300' : 'text-stone-400 hover:text-stone-200'
+          className={`flex flex-col items-center gap-1 p-1.5 rounded-lg cursor-pointer ${
+            isCategories ? 'text-[#F1262D] font-bold' : 'text-[#77736E] hover:text-[#10243B]'
           }`}
         >
           <Layers className="w-4 h-4" />
-          <span className="text-[10px]">Shelves</span>
+          <span className="text-[10px]">Categories</span>
         </button>
 
         <button
           onClick={() => onNavigate(isAdmin ? { type: 'admin' } : { type: 'admin-login' })}
-          className={`flex flex-col items-center gap-1 p-1 cursor-pointer ${
-            isAdminView ? 'text-amber-300' : 'text-stone-400 hover:text-stone-200'
+          className={`flex flex-col items-center gap-1 p-1.5 rounded-lg cursor-pointer ${
+            isAdminView ? 'text-[#F1262D] font-bold' : 'text-[#77736E] hover:text-[#10243B]'
           }`}
         >
           <ShieldCheck className="w-4 h-4" />

@@ -24,8 +24,126 @@
 }
 
 /* =========================================================================
-   HERO 3D REALISTIC BOOKSHELF CABINET & DIRECTIONAL LIGHTING
+   OPENBOOK DESIGN TOKENS & 3D FLOATING / WOODEN SHELF STYLING
+   Warm Ivory: #FFF9F1, Soft Cream: #FFF4E8, Deep Navy: #10243B,
+   Vivid Red: #F1262D, Warm Coral: #FFDDD5, Natural Wood: #B77B45,
+   Rich Wood Shadow: #704326, Body Text: #4D5158, Muted Text: #77736E
    ========================================================================= */
+
+/* Signature Vivid Red Hero Circle (#F1262D) */
+.hero-red-focal-circle {
+  background-color: #F1262D;
+  box-shadow: 0 20px 50px -10px rgba(241, 38, 45, 0.4), 0 10px 20px -5px rgba(241, 38, 45, 0.25);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 3D Floating Book Covers in Front of Red Circle */
+.floating-book-stage {
+  perspective: 1200px;
+  transform-style: preserve-3d;
+}
+
+.floating-book-rear {
+  transform: rotate(-7deg) translateZ(-15px);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  box-shadow: -16px 28px 45px -8px rgba(16, 36, 59, 0.38), -6px 12px 20px -5px rgba(16, 36, 59, 0.22);
+}
+
+.floating-book-rear:hover {
+  transform: rotate(-5deg) translateY(-8px) translateZ(0px);
+  box-shadow: -20px 36px 55px -8px rgba(16, 36, 59, 0.46);
+}
+
+.floating-book-front {
+  transform: rotate(5deg) translateZ(25px);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  box-shadow: 18px 32px 50px -10px rgba(16, 36, 59, 0.42), 8px 14px 25px -5px rgba(16, 36, 59, 0.25);
+}
+
+.floating-book-front:hover {
+  transform: rotate(3deg) translateY(-10px) translateZ(35px);
+  box-shadow: 22px 40px 60px -10px rgba(16, 36, 59, 0.5);
+}
+
+/* Realistic Natural Wooden Shelf Plank (#B77B45 surface, #704326 shadow) */
+.natural-wood-shelf {
+  position: relative;
+  width: 100%;
+  height: 22px;
+  background: linear-gradient(180deg, #C68C56 0%, #B77B45 42%, #9B6233 100%);
+  border-radius: 3px;
+  border-top: 2px solid #D8A16C;
+  border-bottom: 2px solid #704326;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 18px 30px -5px rgba(112, 67, 38, 0.45),
+    0 8px 14px -3px rgba(112, 67, 38, 0.3);
+}
+
+.natural-wood-shelf::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 0;
+  right: 0;
+  height: 9px;
+  background: linear-gradient(90deg, #A76E3A 0%, #C9925E 20%, #BA804B 50%, #C9925E 80%, #A76E3A 100%);
+  transform: perspective(600px) rotateX(46deg);
+  transform-origin: bottom;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.28);
+  border-radius: 3px 3px 0 0;
+}
+
+.natural-wood-shelf::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 1%;
+  right: 1%;
+  height: 20px;
+  background: linear-gradient(180deg, rgba(112, 67, 38, 0.52) 0%, rgba(112, 67, 38, 0.15) 50%, transparent 100%);
+  pointer-events: none;
+  filter: blur(3px);
+}
+
+/* Physical Book Standing on Shelf */
+.shelf-standing-book {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  transform-origin: bottom center;
+}
+
+.shelf-standing-book:hover {
+  transform: translateY(-14px) rotateY(-6deg) scale(1.02);
+  z-index: 30;
+}
+
+.shelf-book-contact-shadow {
+  position: absolute;
+  bottom: -6px;
+  left: 8px;
+  right: 8px;
+  height: 10px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(112, 67, 38, 0.6) 0%, rgba(112, 67, 38, 0.2) 60%, transparent 100%);
+  border-radius: 50%;
+  filter: blur(2.5px);
+  pointer-events: none;
+  transition: transform 0.35s ease, opacity 0.35s ease;
+}
+
+.shelf-standing-book:hover .shelf-book-contact-shadow {
+  transform: scale(0.85) translateY(6px);
+  opacity: 0.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floating-book-rear,
+  .floating-book-front,
+  .shelf-standing-book {
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
 
 .hero-cabinet-stage {
   perspective: 1400px;
@@ -567,5 +685,137 @@
     radial-gradient(circle at 50% 0%, rgba(245, 238, 222, 0.8) 0%, transparent 70%),
     radial-gradient(circle at 100% 100%, rgba(235, 225, 205, 0.5) 0%, transparent 60%);
 }
+
+/* =========================================================================
+   MINIMALIST EDITORIAL HOMEPAGE ("BOOKS FOR ALL" & 3D OVERSIZED BOOKS)
+   ========================================================================= */
+
+.openbook-homepage {
+  background-color: #FFFEFA;
+  color: #080B0F;
+  font-family: var(--font-sans);
+}
+
+/* 3D Stage for the three oversized leaning books */
+/* 3D Stage for the three refined leaning books */
+.oversized-books-stage {
+  perspective: 1200px;
+  perspective-origin: 50% 45%;
+  transform-style: preserve-3d;
+}
+
+/* Base class for physical 3D book object */
+.oversized-3d-book {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1), filter 0.4s ease;
+  will-change: transform;
+}
+
+/* Refined top paper edge (cream stacked pages with subtle deckle striation) */
+.book-top-pages {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  right: 0;
+  height: 26px;
+  transform-origin: top;
+  transform: rotateX(90deg);
+  background: linear-gradient(90deg, #DDD4BD 0%, #F8F3E5 8%, #F4ECE0 50%, #F8F3E5 92%, #D7CDB2 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.18), inset 0 -1px 2px rgba(255, 255, 255, 0.4);
+  border-radius: 1px 1px 0 0;
+  background-image: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 1.5px,
+    rgba(140, 120, 95, 0.08) 1.5px,
+    rgba(140, 120, 95, 0.08) 2.5px
+  );
+  z-index: 5;
+}
+
+/* Refined side paper edge (right profile trimmed book pages) */
+.book-side-pages {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 26px;
+  transform-origin: right;
+  transform: rotateY(90deg);
+  background: linear-gradient(180deg, #E6DCBA 0%, #F7F1DF 12%, #EFE5CD 50%, #E2D6B5 95%, #CEC09E 100%);
+  box-shadow: inset 1px 0 4px rgba(0, 0, 0, 0.22), inset -1px 0 2px rgba(255, 255, 255, 0.3);
+  background-image: repeating-linear-gradient(
+    180deg,
+    transparent 0px,
+    transparent 1.5px,
+    rgba(140, 120, 95, 0.08) 1.5px,
+    rgba(140, 120, 95, 0.08) 2.5px
+  );
+  z-index: 5;
+}
+
+/* Left spine profile curve with authentic round cylinder highlight */
+.book-spine-side {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 26px;
+  transform-origin: left;
+  transform: rotateY(-90deg);
+  border-radius: 3px 0 0 3px;
+  box-shadow: inset -2px 0 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Authentic French joint / hinge crease along front cover */
+.book-hinge-crease {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 12px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.22) 0%, rgba(0, 0, 0, 0.28) 100%);
+  box-shadow: 1px 0 1px rgba(255, 255, 255, 0.22);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Fine bookcloth matte texture sheen overlay */
+.book-surface-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.03) 45%, transparent 60%);
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 10;
+}
+
+/* Subtle blind debossed frame accent on cover perimeter */
+.book-cover-frame {
+  position: absolute;
+  inset: 7px;
+  left: 19px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 8;
+}
+
+/* Realistic multi-layer contact floor shadow */
+.book-ground-shadow {
+  position: absolute;
+  bottom: -16px;
+  left: 8%;
+  right: 8%;
+  height: 22px;
+  background: radial-gradient(ellipse at center, rgba(10, 14, 22, 0.32) 0%, rgba(10, 14, 22, 0.12) 45%, transparent 72%);
+  filter: blur(8px);
+  transform: rotateX(75deg);
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
 
 

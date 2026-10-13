@@ -78,28 +78,31 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
       
       {/* 1. Header & Catalog Overview */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-stone-200">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-4 border-b border-[#F0E5D8]">
         <div>
-          <span className="text-xs uppercase font-mono tracking-widest text-[#FF3038] font-bold block mb-1">
-            Complete Digital Collection
-          </span>
-          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-stone-900 tracking-tight">
+          <div className="flex items-center gap-2 mb-1.5">
+            <span className="w-5 h-[2px] bg-[#F1262D] rounded-full inline-block" />
+            <span className="text-xs uppercase font-sans tracking-[0.2em] text-[#F1262D] font-bold">
+              Complete Digital Collection
+            </span>
+          </div>
+          <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-[#10243B] tracking-tight">
             Browse All Books
           </h1>
-          <p className="text-sm text-stone-600 mt-2 max-w-2xl leading-relaxed">
+          <p className="text-sm text-[#4D5158] mt-2 max-w-2xl leading-relaxed">
             Discover free digitized books. Every title includes unabridged PDF reading and direct downloads.
           </p>
         </div>
 
         {/* View Mode Toggle & Counter */}
         <div className="flex items-center gap-3">
-          <div className="inline-flex items-center p-1 bg-stone-100 rounded-xl border border-stone-200/80">
+          <div className="inline-flex items-center p-1 bg-[#FFF4E8] rounded-full border border-[#F0E5D8]">
             <button
               onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'grid'
-                  ? 'bg-white text-stone-900 shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                  ? 'bg-[#10243B] text-white shadow-xs'
+                  : 'text-[#4D5158] hover:text-[#10243B]'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
@@ -107,10 +110,10 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
             </button>
             <button
               onClick={() => setViewMode('shelf')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === 'shelf'
-                  ? 'bg-[#FF3038] text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900'
+                  ? 'bg-[#F1262D] text-white shadow-xs'
+                  : 'text-[#4D5158] hover:text-[#10243B]'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -118,14 +121,14 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
             </button>
           </div>
 
-          <span className="font-mono text-xs font-semibold text-stone-600 bg-white px-3 py-2 rounded-xl border border-stone-200 shadow-2xs">
+          <span className="font-mono text-xs font-semibold text-[#10243B] bg-[#FFF4E8] px-3.5 py-2 rounded-full border border-[#F0E5D8] shadow-2xs">
             {filteredBooks.length} of {books.length} Books
           </span>
         </div>
       </div>
 
       {/* 2. Bookstore Control Bar: Search & Category Chips & Sorting */}
-      <div className="bg-white p-5 rounded-2xl border border-stone-200/90 shadow-2xs space-y-4">
+      <div className="bg-[#FFF4E8] p-5 rounded-2xl border border-[#F0E5D8] shadow-2xs space-y-4">
         
         {/* Row 1: Search Input & Sort Dropdown */}
         <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
@@ -135,13 +138,13 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by title, author, or keyword..."
-              className="w-full pl-9 pr-9 py-2.5 text-xs bg-stone-50 border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-900/15 focus:border-amber-900 transition-all placeholder:text-stone-400"
+              className="w-full pl-9 pr-9 py-2.5 text-xs bg-white border border-[#E8DEC8] rounded-xl focus:outline-none focus:border-[#F1262D] focus:ring-1 focus:ring-[#F1262D] transition-all placeholder:text-[#77736E] text-[#10243B]"
             />
-            <Search className="w-4 h-4 text-stone-400 absolute left-3 top-3" />
+            <Search className="w-4 h-4 text-[#77736E] absolute left-3 top-3" />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="p-1 text-stone-400 hover:text-stone-600 absolute right-2.5 top-2.5 cursor-pointer"
+                className="p-1 text-[#77736E] hover:text-[#10243B] absolute right-2.5 top-2.5 cursor-pointer"
                 title="Clear search"
               >
                 <X className="w-3.5 h-3.5" />
@@ -151,14 +154,14 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
 
           {/* Sort Selection */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end text-xs">
-            <span className="text-stone-500 whitespace-nowrap flex items-center gap-1 font-medium">
-              <ArrowUpDown className="w-3.5 h-3.5 text-stone-400" />
+            <span className="text-[#77736E] whitespace-nowrap flex items-center gap-1 font-medium">
+              <ArrowUpDown className="w-3.5 h-3.5 text-[#77736E]" />
               <span>Sort:</span>
             </span>
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as SortOption)}
-              className="px-3 py-2 bg-stone-50 border border-stone-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-amber-900/15 focus:border-amber-900 text-stone-800 cursor-pointer"
+              className="px-3 py-2 bg-white border border-[#E8DEC8] rounded-xl text-xs font-medium focus:outline-none focus:border-[#F1262D] text-[#10243B] cursor-pointer"
             >
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
@@ -170,16 +173,16 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
         </div>
 
         {/* Row 2: Category Filter Controls */}
-        <div className="pt-3 border-t border-stone-100 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
-          <span className="text-stone-400 font-semibold uppercase tracking-wider text-[10px] shrink-0 mr-1 hidden sm:inline">
+        <div className="pt-3 border-t border-[#F0E5D8] flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none text-xs">
+          <span className="text-[#77736E] font-semibold uppercase tracking-wider text-[10px] shrink-0 mr-1 hidden sm:inline">
             Subject:
           </span>
           <button
             onClick={() => setSelectedCategory('all')}
             className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors cursor-pointer ${
               selectedCategory === 'all'
-                ? 'bg-stone-900 text-white shadow-2xs'
-                : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                ? 'bg-[#10243B] text-white shadow-2xs font-semibold'
+                : 'bg-white text-[#4D5158] hover:text-[#F1262D] border border-[#E8DEC8]'
             }`}
           >
             All Subjects ({books.length})
@@ -194,8 +197,8 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
                 onClick={() => setSelectedCategory(cat.id)}
                 className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors cursor-pointer ${
                   isSelected
-                    ? 'bg-amber-900 text-white shadow-2xs'
-                    : 'bg-stone-100 text-stone-700 hover:bg-stone-200'
+                    ? 'bg-[#F1262D] text-white shadow-2xs font-semibold'
+                    : 'bg-white text-[#4D5158] hover:text-[#F1262D] border border-[#E8DEC8]'
                 }`}
               >
                 {cat.name} ({count})
@@ -206,27 +209,27 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
 
         {/* Active Filters Tag Bar (if any filter active) */}
         {(search || selectedCategory !== 'all') && (
-          <div className="pt-2 flex items-center gap-2 flex-wrap text-xs text-stone-600">
-            <span className="text-stone-400 text-[11px]">Active filters:</span>
+          <div className="pt-2 flex items-center gap-2 flex-wrap text-xs text-[#4D5158]">
+            <span className="text-[#77736E] text-[11px]">Active filters:</span>
             {search && (
-              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-md font-medium">
+              <span className="inline-flex items-center gap-1 bg-white text-[#10243B] border border-[#E8DEC8] px-2.5 py-0.5 rounded-md font-medium">
                 Keyword: "{search}"
-                <button onClick={() => setSearch('')} className="hover:text-amber-950 cursor-pointer">
+                <button onClick={() => setSearch('')} className="hover:text-[#F1262D] cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             {selectedCategory !== 'all' && (
-              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-900 border border-amber-200 px-2.5 py-0.5 rounded-md font-medium">
+              <span className="inline-flex items-center gap-1 bg-white text-[#10243B] border border-[#E8DEC8] px-2.5 py-0.5 rounded-md font-medium">
                 Subject: {selectedCategoryObj?.name || selectedCategory}
-                <button onClick={() => setSelectedCategory('all')} className="hover:text-amber-950 cursor-pointer">
+                <button onClick={() => setSelectedCategory('all')} className="hover:text-[#F1262D] cursor-pointer">
                   <X className="w-3 h-3" />
                 </button>
               </span>
             )}
             <button
               onClick={handleResetFilters}
-              className="text-stone-500 hover:text-stone-900 underline underline-offset-2 ml-2 cursor-pointer"
+              className="text-[#F1262D] hover:underline underline-offset-2 ml-2 cursor-pointer font-medium"
             >
               Reset all
             </button>
@@ -245,17 +248,17 @@ export const BooksCatalog: React.FC<BooksCatalogProps> = ({
           onSelectCategory={catId => setSelectedCategory(catId)}
         />
       ) : filteredBooks.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-stone-200 p-16 text-center max-w-lg mx-auto shadow-xs">
-          <BookOpen className="w-12 h-12 text-stone-300 mx-auto mb-3" />
-          <h3 className="font-serif text-xl font-bold text-stone-800">
+        <div className="bg-[#FFF4E8] rounded-2xl border border-[#F0E5D8] p-16 text-center max-w-lg mx-auto shadow-xs">
+          <BookOpen className="w-12 h-12 text-[#77736E]/40 mx-auto mb-3" />
+          <h3 className="font-serif text-xl font-bold text-[#10243B]">
             No matching books found
           </h3>
-          <p className="text-xs text-stone-500 mt-2 leading-relaxed">
+          <p className="text-xs text-[#77736E] mt-2 leading-relaxed">
             We couldn't find any titles matching your current search criteria. Try using broader search keywords or reset your filters.
           </p>
           <button
             onClick={handleResetFilters}
-            className="mt-6 px-5 py-2.5 text-xs font-semibold text-white bg-stone-900 hover:bg-stone-800 rounded-xl transition-colors cursor-pointer"
+            className="mt-6 px-5 py-2.5 text-xs font-semibold text-white bg-[#F1262D] hover:bg-[#D91B22] rounded-xl transition-colors cursor-pointer shadow-xs"
           >
             Show All Books
           </button>

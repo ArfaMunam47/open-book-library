@@ -8,6 +8,7 @@ import {
 } from './lib/api';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { NavigationRail } from './components/NavigationRail';
 import { HomeView } from './components/HomeView';
 import { BooksCatalog } from './components/BooksCatalog';
 import { CategoriesView } from './components/CategoriesView';
@@ -179,20 +180,24 @@ export default function App() {
     : undefined;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8F6EC] text-[#103D30] font-sans selection:bg-[#F2DFBC] selection:text-[#103D30]">
+    <div className={`min-h-screen flex flex-col font-sans transition-colors ${
+      currentView.type === 'home' 
+        ? 'bg-[#FFFEFA] text-[#080B0F] selection:bg-[#FF4D16] selection:text-white' 
+        : 'bg-[#FFF9F1] text-[#4D5158] selection:bg-[#FFDDD5] selection:text-[#10243B]'
+    }`}>
       
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-5 right-5 z-50 animate-fade-in">
           <div className={`p-4 rounded-lg shadow-lg border text-xs flex items-center gap-2.5 max-w-sm ${
             toast.type === 'success' 
-              ? 'bg-stone-900 text-white border-stone-800' 
-              : 'bg-red-900 text-white border-red-800'
+              ? 'bg-[#10243B] text-white border-[#1B3654]' 
+              : 'bg-[#F1262D] text-white border-red-700'
           }`}>
             {toast.type === 'success' ? (
               <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-red-300 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-red-200 shrink-0" />
             )}
             <span>{toast.message}</span>
           </div>
@@ -213,14 +218,30 @@ export default function App() {
         />
       )}
 
-      {/* Main Content Area */}
-      <main className="flex-1 w-full">
-        {loading && books.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 text-stone-400">
-            <Loader2 className="w-8 h-8 animate-spin mb-3 text-[#FF3038]" />
-            <p className="text-xs font-mono">Loading OpenBook Digital Library...</p>
-          </div>
-        ) : (
+      {/* Main Layout Area with Left Sidebar + Content */}
+      <div className="flex-1 flex w-full">
+        {currentView.type !== 'pdf-reader' && currentView.type !== 'home' && (
+          <NavigationRail
+            currentView={currentView}
+            onNavigate={navigateTo}
+            isAdmin={isAdmin}
+            totalBooks={books.length}
+            onOpenAbout={() => setShowAboutModal(true)}
+            onScrollToShelf={() => {
+              const el = document.getElementById('featured-shelf') || document.getElementById('shelves');
+              if (el) el.scrollIntoView({ behavior: 'smooth' });
+            }}
+          />
+        )}
+
+        {/* Main Content Area */}
+        <main className="flex-1 w-full min-w-0 pb-16 lg:pb-0">
+          {loading && books.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-32 text-stone-400">
+              <Loader2 className="w-8 h-8 animate-spin mb-3 text-[#F1262D]" />
+              <p className="text-xs font-mono">Loading OpenBook Digital Library...</p>
+            </div>
+          ) : (
           <>
             {/* 1. Home View */}
             {currentView.type === 'home' && (
@@ -356,9 +377,10 @@ export default function App() {
           </>
         )}
       </main>
+    </div>
 
-      {/* Footer (hidden inside full-screen PDF reader) */}
-      {currentView.type !== 'pdf-reader' && (
+      {/* Footer (hidden inside full-screen PDF reader and minimalist homepage) */}
+      {currentView.type !== 'pdf-reader' && currentView.type !== 'home' && (
         <Footer
           onNavigateHome={() => navigateTo({ type: 'home' })}
           onNavigateBooks={() => navigateTo({ type: 'books' })}

@@ -81,12 +81,12 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
             <p className="font-serif text-xs font-bold truncate text-[#F8F5E9] leading-tight">
               {book.title}
             </p>
-            <p className="text-[10px] text-[#C76A32] truncate mt-0.5">
+            <p className="text-[10px] text-[#FF3038] font-medium truncate mt-0.5">
               {book.author}
             </p>
             <div className="flex items-center justify-between text-[9px] text-[#A6C0B4] font-mono mt-1.5 pt-1 border-t border-[#235848]/70">
               <span>{book.page_count ? `${book.page_count} pages` : 'Complete'}</span>
-              <span className="text-[#C76A32] font-medium">Click to inspect →</span>
+              <span className="text-[#FF3038] font-bold">Click to inspect →</span>
             </div>
           </div>
         </div>
@@ -114,7 +114,7 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
               />
             ) : (
               <div className="w-full h-full p-4 flex flex-col justify-between bg-gradient-to-b from-[#2B1B12] via-[#21140D] to-[#170E09] text-[#F8F5E9]">
-                <span className="text-[8px] font-mono tracking-widest uppercase text-[#C76A32] font-bold">
+                <span className="text-[8px] font-mono tracking-widest uppercase text-[#FF3038] font-bold">
                   {book.category_name || 'Library Volume'}
                 </span>
                 <div>
@@ -125,7 +125,7 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
                     {book.author}
                   </p>
                 </div>
-                <span className="text-[8px] font-mono text-[#C76A32]">
+                <span className="text-[8px] font-mono text-[#FF3038] font-semibold">
                   {formatFileSize(book.file_size)}
                 </span>
               </div>
@@ -157,7 +157,7 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
         <div className="flex items-center justify-between mb-2 sm:mb-4 px-2 sm:px-4">
           <div className="flex flex-col">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#C76A32]" />
+              <span className="w-2.5 h-2.5 rounded-full bg-[#FF3038] shadow-xs" />
               <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#153C32] tracking-tight">
                 {title}
               </h3>
@@ -177,7 +177,7 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => scrollShelf(shelfId, 'left')}
-                className="w-8 h-8 rounded-full bg-white border border-[#D5CFBE] text-[#153C32] hover:bg-[#EFECE0] hover:text-[#C76A32] flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                className="w-8 h-8 rounded-full bg-white border border-[#D5CFBE] text-[#153C32] hover:bg-[#EFECE0] hover:text-[#FF3038] hover:border-[#FF3038] flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                 title="Scroll shelf left"
                 aria-label={`Scroll ${title} left`}
               >
@@ -185,7 +185,7 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
               </button>
               <button
                 onClick={() => scrollShelf(shelfId, 'right')}
-                className="w-8 h-8 rounded-full bg-white border border-[#D5CFBE] text-[#153C32] hover:bg-[#EFECE0] hover:text-[#C76A32] flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
+                className="w-8 h-8 rounded-full bg-white border border-[#D5CFBE] text-[#153C32] hover:bg-[#EFECE0] hover:text-[#FF3038] hover:border-[#FF3038] flex items-center justify-center transition-colors cursor-pointer shadow-2xs"
                 title="Scroll shelf right"
                 aria-label={`Scroll ${title} right`}
               >
@@ -268,7 +268,7 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
             onClick={() => setActiveTab('all')}
             className={`px-4 py-2 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'all'
-                ? 'bg-[#153C32] text-[#F8F5E9] font-semibold shadow-xs'
+                ? 'bg-[#FF3038] text-white font-semibold shadow-xs'
                 : 'bg-[#EDE8D8] text-[#526058] hover:text-[#153C32] hover:bg-[#E3DEC9] border border-[#DDD7C4]'
             }`}
           >
@@ -280,11 +280,11 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
             onClick={() => setActiveTab('recent')}
             className={`px-4 py-2 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'recent'
-                ? 'bg-[#153C32] text-[#F8F5E9] font-semibold shadow-xs'
+                ? 'bg-[#FF3038] text-white font-semibold shadow-xs'
                 : 'bg-[#EDE8D8] text-[#526058] hover:text-[#153C32] hover:bg-[#E3DEC9] border border-[#DDD7C4]'
             }`}
           >
-            <Clock className="w-3.5 h-3.5 text-[#C76A32]" />
+            <Clock className="w-3.5 h-3.5" />
             <span>Recently Added</span>
           </button>
 
@@ -292,11 +292,11 @@ export const ThreeDBookshelf: React.FC<ThreeDBookshelfProps> = ({
             onClick={() => setActiveTab('categories')}
             className={`px-4 py-2 rounded-full font-medium transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
               activeTab === 'categories'
-                ? 'bg-[#153C32] text-[#F8F5E9] font-semibold shadow-xs'
+                ? 'bg-[#FF3038] text-white font-semibold shadow-xs'
                 : 'bg-[#EDE8D8] text-[#526058] hover:text-[#153C32] hover:bg-[#E3DEC9] border border-[#DDD7C4]'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-[#C76A32]" />
+            <Layers className="w-3.5 h-3.5" />
             <span>By Category ({categoriesWithBooks.length})</span>
           </button>
         </div>
