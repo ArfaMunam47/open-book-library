@@ -44,67 +44,87 @@ export const Header: React.FC<HeaderProps> = ({
 
   const isHome = currentView.type === 'home';
 
-  // If on the minimalist homepage, render the exact single slim horizontal nav bar
+  // If on the homepage, render the exact navigation bar matching the reference image
   if (isHome) {
     return (
-      <header className="w-full bg-[#FFFEFA] border-b border-[#EAE7E1] text-[#080B0F] z-40 transition-colors">
-        <div className="max-w-[1440px] mx-auto px-6 sm:px-12 lg:px-20 xl:px-24">
-          <div className="flex items-center justify-between h-16 sm:h-18 lg:h-20">
+      <header className="w-full bg-[#F7F3EC] border-b border-[#D9CEC2]/70 text-[#181512] z-40 transition-colors">
+        <div className="max-w-[1520px] mx-auto px-6 sm:px-10 lg:px-16 xl:px-20">
+          <div className="flex items-center justify-between h-16 lg:h-[68px]">
             
-            {/* FAR LEFT: Simple black open-book logo + OpenBook + DIGITAL LIBRARY subtitle */}
+            {/* FAR LEFT: Outlined open book symbol + OPEN SOURCE / DIGITAL LIBRARY */}
             <button
               onClick={() => onNavigate({ type: 'home' })}
-              className="flex items-center gap-3 text-left group focus:outline-none cursor-pointer select-none"
-              aria-label="OpenBook Digital Library"
+              className="flex items-center gap-3.5 text-left group focus:outline-none cursor-pointer select-none"
+              aria-label="Open Source Digital Library"
             >
-              <div className="text-[#080B0F] flex items-center justify-center transition-transform group-hover:scale-105">
-                <BookOpen className="w-6 h-6 text-[#080B0F] stroke-[2.2]" />
+              <div className="text-[#181512] flex items-center justify-center transition-transform group-hover:scale-105">
+                <svg 
+                  viewBox="0 0 44 32" 
+                  className="w-10 h-7 sm:w-11 sm:h-8 text-[#181512]" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  strokeWidth="2.2" 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M22 6c-4-3-10-4-19-4v24c9 0 15 1 19 4 4-3 10-4 19-4V2c-9 0-15 1-19 4z" />
+                  <path d="M22 6v24" />
+                </svg>
               </div>
               <div className="flex flex-col">
-                <span className="font-sans text-xl sm:text-2xl font-bold tracking-tight text-[#080B0F] leading-none">
-                  OpenBook
+                <span className="font-sans text-base sm:text-lg font-bold tracking-[0.08em] text-[#181512] leading-none uppercase">
+                  OPEN SOURCE
                 </span>
-                <span className="text-[9px] tracking-[0.24em] font-semibold text-[#536071] uppercase font-sans mt-1">
+                <span className="text-[9.5px] sm:text-[10px] tracking-[0.26em] font-medium text-[#5E5852] uppercase font-sans mt-1">
                   DIGITAL LIBRARY
                 </span>
               </div>
             </button>
 
-            {/* ACROSS MIDDLE: Three simple navigation links (Library, Browse, About) */}
-            <nav className="hidden md:flex items-center gap-10 lg:gap-14 text-sm font-medium text-[#080B0F]">
-              {/* Library (Active on home, with a short thin orange underline) */}
+            {/* ACROSS MIDDLE: Four navigation links (Home, Books, Collections, About) */}
+            <nav className="hidden md:flex items-center gap-9 lg:gap-12 xl:gap-14 text-[15px] font-medium text-[#181512]">
+              {/* Home (Active on homepage with a thin terracotta underline) */}
               <button
                 onClick={() => onNavigate({ type: 'home' })}
-                className="relative py-1 text-[#080B0F] font-semibold cursor-pointer group flex flex-col items-center"
+                className="relative py-1 text-[#181512] font-semibold cursor-pointer group flex flex-col items-center"
               >
-                <span>Library</span>
-                <span className="h-[2px] w-5 bg-[#FF4D16] rounded-full mt-1 inline-block" />
+                <span>Home</span>
+                <span className="h-[2px] w-6 bg-[#A52A22] rounded-full mt-1.5 inline-block" />
               </button>
 
-              {/* Browse */}
+              {/* Books */}
               <button
                 onClick={() => onNavigate({ type: 'books' })}
-                className="py-1 text-[#080B0F] hover:text-[#FF4D16] transition-colors cursor-pointer"
+                className="py-1 text-[#181512] hover:text-[#A52A22] transition-colors cursor-pointer relative group"
               >
-                Browse
+                <span>Books</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#A52A22] transition-all duration-300 group-hover:w-full" />
+              </button>
+
+              {/* Collections */}
+              <button
+                onClick={() => onNavigate({ type: 'categories' })}
+                className="py-1 text-[#181512] hover:text-[#A52A22] transition-colors cursor-pointer relative group"
+              >
+                <span>Collections</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#A52A22] transition-all duration-300 group-hover:w-full" />
               </button>
 
               {/* About */}
               <button
                 onClick={() => onOpenAbout?.()}
-                className="py-1 text-[#080B0F] hover:text-[#FF4D16] transition-colors cursor-pointer"
+                className="py-1 text-[#181512] hover:text-[#A52A22] transition-colors cursor-pointer relative group"
               >
-                About
+                <span>About</span>
+                <span className="absolute bottom-0 left-0 w-0 h-[1.5px] bg-[#A52A22] transition-all duration-300 group-hover:w-full" />
               </button>
             </nav>
 
-            {/* FAR RIGHT: Vertical divider + Black search icon + Compact black pill Admin control */}
+            {/* FAR RIGHT: Search icon button + Sign in / Admin button */}
             <div className="flex items-center gap-4 sm:gap-6">
               
-              {/* Divider */}
-              <div className="hidden sm:block h-5 w-[1px] bg-[#EAE7E1]" />
-
-              {/* Simple black search icon */}
+              {/* Simple black search icon button */}
               <button
                 onClick={() => {
                   const inputEl = document.getElementById('hero-search-input');
@@ -114,27 +134,27 @@ export const Header: React.FC<HeaderProps> = ({
                     onNavigate({ type: 'books' });
                   }
                 }}
-                className="p-2 text-[#080B0F] hover:text-[#FF4D16] transition-colors cursor-pointer"
+                className="p-2 text-[#181512] hover:text-[#A52A22] transition-colors cursor-pointer"
                 title="Search Library"
                 aria-label="Search Library"
               >
-                <Search className="w-5 h-5 text-[#080B0F] stroke-[2]" />
+                <Search className="w-5 h-5 text-[#181512] stroke-[2.2]" />
               </button>
 
-              {/* Compact, black, pill-shaped Admin control with white text and shield icon */}
+              {/* Pill-shaped Sign In / Admin button matching reference: transparent bg, thin terracotta border, dark typography */}
               {isAdmin ? (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-2.5">
                   <button
                     onClick={() => onNavigate({ type: 'admin', subview: 'books' })}
-                    className="px-4 py-2 text-xs font-semibold rounded-full bg-[#080B0F] text-white hover:bg-neutral-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    className="px-6 py-2.5 text-[15px] font-semibold rounded-full bg-transparent border border-[#A52A22] text-[#181512] hover:bg-[#A52A22]/5 transition-colors flex items-center gap-2 cursor-pointer shadow-2xs font-sans tracking-tight"
                   >
-                    <ShieldCheck className="w-3.5 h-3.5 text-white" />
+                    <ShieldCheck className="w-4 h-4 text-[#A52A22] shrink-0" />
                     <span>Admin</span>
                   </button>
                   <button
                     onClick={onAdminLogout}
                     title="Sign out of admin"
-                    className="p-1.5 text-[#536071] hover:text-[#080B0F] hover:bg-neutral-100 rounded-full transition-colors cursor-pointer"
+                    className="p-2 text-[#5E5852] hover:text-[#181512] hover:bg-neutral-200/50 rounded-full transition-colors cursor-pointer"
                     aria-label="Log out"
                   >
                     <LogOut className="w-4 h-4" />
@@ -143,17 +163,16 @@ export const Header: React.FC<HeaderProps> = ({
               ) : (
                 <button
                   onClick={() => onNavigate({ type: 'admin-login' })}
-                  className="px-4 sm:px-5 py-2 text-xs font-semibold rounded-full bg-[#080B0F] text-white hover:bg-neutral-800 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  className="px-6 sm:px-7 py-2.5 text-[15px] font-semibold rounded-full bg-transparent border border-[#A52A22] text-[#181512] hover:bg-[#A52A22]/5 transition-colors cursor-pointer shadow-2xs font-sans"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5 text-white" />
-                  <span>Admin</span>
+                  Sign in
                 </button>
               )}
 
               {/* Mobile menu toggle for smaller screens */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 text-[#080B0F] hover:bg-neutral-100 rounded-lg cursor-pointer"
+                className="md:hidden p-2 text-[#181512] hover:bg-neutral-200/50 rounded-lg cursor-pointer"
                 aria-label="Toggle navigation menu"
               >
                 {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -165,23 +184,29 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Mobile dropdown on home */}
           {mobileMenuOpen && (
-            <div className="md:hidden py-4 border-t border-[#EAE7E1] space-y-2 animate-in fade-in duration-200">
+            <div className="md:hidden py-4 border-t border-[#D9CEC2]/60 space-y-2 animate-in fade-in duration-200">
               <button
                 onClick={() => { onNavigate({ type: 'home' }); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm font-semibold text-[#FF4D16] flex items-center justify-between"
+                className="w-full text-left px-3 py-2 text-sm font-semibold text-[#A52A22] flex items-center justify-between"
               >
-                <span>Library</span>
-                <span className="w-2 h-2 rounded-full bg-[#FF4D16]" />
+                <span>Home</span>
+                <span className="w-2 h-2 rounded-full bg-[#A52A22]" />
               </button>
               <button
                 onClick={() => { onNavigate({ type: 'books' }); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-[#080B0F] hover:text-[#FF4D16]"
+                className="w-full text-left px-3 py-2 text-sm text-[#181512] hover:text-[#A52A22]"
               >
-                Browse Books
+                Books
+              </button>
+              <button
+                onClick={() => { onNavigate({ type: 'categories' }); setMobileMenuOpen(false); }}
+                className="w-full text-left px-3 py-2 text-sm text-[#181512] hover:text-[#A52A22]"
+              >
+                Collections
               </button>
               <button
                 onClick={() => { onOpenAbout?.(); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3 py-2 text-sm text-[#080B0F] hover:text-[#FF4D16]"
+                className="w-full text-left px-3 py-2 text-sm text-[#181512] hover:text-[#A52A22]"
               >
                 About
               </button>

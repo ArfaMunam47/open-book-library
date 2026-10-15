@@ -182,7 +182,7 @@ export default function App() {
   return (
     <div className={`min-h-screen flex flex-col font-sans transition-colors ${
       currentView.type === 'home' 
-        ? 'bg-[#FFFEFA] text-[#080B0F] selection:bg-[#FF4D16] selection:text-white' 
+        ? 'bg-[#F7F3EC] text-[#181512] selection:bg-[#A52A22] selection:text-white' 
         : 'bg-[#FFF9F1] text-[#4D5158] selection:bg-[#FFDDD5] selection:text-[#10243B]'
     }`}>
       
@@ -219,7 +219,7 @@ export default function App() {
       )}
 
       {/* Main Layout Area with Left Sidebar + Content */}
-      <div className="flex-1 flex w-full">
+      <div className={`flex-1 flex w-full ${currentView.type === 'home' ? 'min-h-0 flex-col' : ''}`}>
         {currentView.type !== 'pdf-reader' && currentView.type !== 'home' && (
           <NavigationRail
             currentView={currentView}
@@ -235,7 +235,7 @@ export default function App() {
         )}
 
         {/* Main Content Area */}
-        <main className="flex-1 w-full min-w-0 pb-16 lg:pb-0">
+        <main className={`flex-1 w-full min-w-0 ${currentView.type === 'home' ? 'flex flex-col min-h-0 pb-0' : 'pb-16 lg:pb-0'}`}>
           {loading && books.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-32 text-stone-400">
               <Loader2 className="w-8 h-8 animate-spin mb-3 text-[#F1262D]" />
@@ -248,6 +248,8 @@ export default function App() {
               <HomeView
                 books={books}
                 categories={categories}
+                loading={loading}
+                onRefreshBooks={handleRefreshBooks}
                 onOpenBook={(bookId) => navigateTo({ type: 'book-details', bookId })}
                 onReadOnline={(bookId) => window.open(`/api/pdf/${bookId}`, '_blank', 'noopener,noreferrer')}
                 onSelectCategory={(categoryId) => navigateTo({ type: 'books', categoryId })}

@@ -10,8 +10,12 @@ import {
   getDocs,
   collection,
   deleteDoc,
-  writeBatch
-} from 'firebase/firestore';
+  writeBatch,
+  setLogLevel
+} from 'firebase/firestore/lite';
+
+// Suppress internal gRPC idle disconnect and transport warnings on the backend
+setLogLevel('error');
 
 export interface Category {
   id: string;
