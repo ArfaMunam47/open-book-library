@@ -514,16 +514,23 @@ app.post(
 app.post(
   '/api/admin/generate-description',
   requireAdminAuth,
+  upload.single('pdf'),
   async (req: Request, res: Response) => {
+    let tempFilePath: string | undefined;
     try {
-      const { bookId, title, author, categoryId } = req.body;
+      const { bookId, title, author, categoryId } = req.body || {};
       let pdfPath: string | undefined;
       let categoryName: string | undefined;
 
-      if (bookId) {
+      if (req.file) {
+        tempFilePath = req.file.path;
+        pdfPath = req.file.path;
+      } else if (bookId) {
         const book = db.getBookById(bookId);
         if (book) {
-          pdfPath = book.pdf_path;
+          if (book.pdf_path && fs.existsSync(book.pdf_path)) {
+            pdfPath = book.pdf_path;
+          }
           categoryName = book.category_name;
         }
       }
@@ -544,6 +551,14 @@ app.post(
     } catch (err: any) {
       console.error('Error generating description:', err);
       res.status(500).json({ error: err.message || 'Failed to generate description' });
+    } finally {
+      if (tempFilePath && fs.existsSync(tempFilePath)) {
+        try {
+          fs.unlinkSync(tempFilePath);
+        } catch (e) {
+          console.warn('Could not remove temporary PDF file:', e);
+        }
+      }
     }
   }
 );

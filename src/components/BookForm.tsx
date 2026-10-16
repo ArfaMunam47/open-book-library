@@ -176,6 +176,7 @@ export const BookForm: React.FC<BookFormProps> = ({
       setIsRegeneratingDesc(true);
       setDescriptionNotice(null);
       const generated = await generateBookDescriptionApi({
+        pdfFile,
         bookId: initialBook?.id,
         title: title.trim(),
         author: author.trim(),

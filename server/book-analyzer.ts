@@ -223,39 +223,42 @@ function heuristicExtraction(
 
 /**
  * Executes a Gemini request with model fallback cascade and retry for transient errors.
- * Prioritizes high-availability production models ('gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite').
+ * Prioritizes high-availability production models ('gemini-flash-lite-latest', 'gemini-3.1-flash-lite', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.8-flash').
  */
 async function executeGeminiWithRetry<T>(
   action: (ai: GoogleGenAI, model: string) => Promise<T>,
-  models: string[] = ['gemini-3.5-flash', 'gemini-3.7-flash', 'gemini-3.8-flash', 'gemini-3.1-flash-lite'],
-  timeoutMs: number = 25000
+  models: string[] = [
+    'gemini-flash-lite-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3.8-flash',
+    'gemini-flash-latest'
+  ],
+  timeoutMs: number = 14000
 ): Promise<T | null> {
-  if (!process.env.GEMINI_API_KEY) return null;
-  const ai = new GoogleGenAI();
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    console.warn('GEMINI_API_KEY is not defined in environment.');
+    return null;
+  }
+  const ai = new GoogleGenAI({ apiKey });
 
   for (const model of models) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      try {
-        const actionPromise = action(ai, model);
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms with ${model}`)), timeoutMs)
-        );
+    try {
+      const actionPromise = action(ai, model);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout after ${timeoutMs}ms with ${model}`)), timeoutMs)
+      );
 
-        const result = await Promise.race([actionPromise, timeoutPromise]);
-        if (result) return result;
-      } catch (err: any) {
-        const errMsg = String(err?.message || err || '');
-        const status = err?.status || (errMsg.includes('503') ? 503 : (errMsg.includes('429') ? 429 : null));
-        const isTransient = status === 503 || status === 429 || errMsg.includes('Timeout') || errMsg.includes('overloaded') || errMsg.includes('high demand');
-
-        if (isTransient && attempt === 1) {
-          await new Promise(r => setTimeout(r, 600));
-          continue;
-        }
-
-        // On error or model unreachability, proceed to next model in the cascade
-        break;
-      }
+      const result = await Promise.race([actionPromise, timeoutPromise]);
+      if (result) return result;
+    } catch (err: any) {
+      const errMsg = String(err?.message || err || '');
+      const status = err?.status || (errMsg.includes('503') ? 503 : (errMsg.includes('429') ? 429 : null));
+      console.warn(`Model ${model} attempt failed (status: ${status}):`, errMsg.substring(0, 140));
+      // Immediately failover to next model in cascade on 503/429/timeout/unavailable
+      continue;
     }
   }
 
@@ -466,7 +469,14 @@ Guidelines:
       config: { temperature: 0.2 }
     });
     if (res.text && res.text.trim().length > 20) {
-      return res.text.trim();
+      let cleanText = res.text.trim();
+      // Remove any trailing word-count notes like *(71 words)* or (80 words)
+      cleanText = cleanText.replace(/\s*\(\*?\s*\d+\s*words?\s*\*?\)\s*$/i, '');
+      // Strip outer wrapping quotes if the model wrapped the entire text
+      if ((cleanText.startsWith('"') && cleanText.endsWith('"')) || (cleanText.startsWith('“') && cleanText.endsWith('”'))) {
+        cleanText = cleanText.slice(1, -1).trim();
+      }
+      return cleanText;
     }
     return null;
   });
@@ -475,5 +485,5 @@ Guidelines:
     return generated;
   }
 
-  throw new Error('The AI service is temporarily experiencing high demand. Please try clicking "Generate Description" again.');
+  throw new Error('The AI description service could not complete the request. Please check network/quota or try again.');
 }

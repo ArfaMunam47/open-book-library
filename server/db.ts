@@ -269,10 +269,12 @@ export class DatabaseService {
     // Only persist chunks for authoritative books if their disk files exist and chunks are missing
     for (const book of this.books) {
       if (book.pdf_path && fs.existsSync(book.pdf_path)) {
-        await this.persistFileToChunks(book.id, 'pdf_chunks', book.pdf_path);
+        const ok = await this.persistFileToChunks(book.id, 'pdf_chunks', book.pdf_path);
+        if (!ok) break; // If quota or error encountered, stop loop gracefully
       }
       if (book.cover_path && fs.existsSync(book.cover_path)) {
-        await this.persistFileToChunks(book.id, 'cover_chunks', book.cover_path);
+        const ok = await this.persistFileToChunks(book.id, 'cover_chunks', book.cover_path);
+        if (!ok) break;
       }
     }
   }
@@ -302,21 +304,27 @@ export class DatabaseService {
   /**
    * Splits a buffer into 512KB chunks and stores them in a Firestore subcollection.
    */
-  async saveBufferToChunks(bookId: string, subcollection: 'pdf_chunks' | 'cover_chunks', buffer: Buffer): Promise<void> {
-    if (!this.firestore) return;
+  async saveBufferToChunks(bookId: string, subcollection: 'pdf_chunks' | 'cover_chunks', buffer: Buffer): Promise<boolean> {
+    if (!this.firestore) return false;
 
-    const totalChunks = Math.ceil(buffer.length / CHUNK_SIZE);
-    for (let i = 0; i < totalChunks; i++) {
-      const chunk = buffer.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-      const chunkRef = doc(this.firestore, 'books', bookId, subcollection, String(i));
-      await setDoc(chunkRef, {
-        chunkIndex: i,
-        totalChunks,
-        data: chunk.toString('base64')
-      });
+    try {
+      const totalChunks = Math.ceil(buffer.length / CHUNK_SIZE);
+      for (let i = 0; i < totalChunks; i++) {
+        const chunk = buffer.subarray(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const chunkRef = doc(this.firestore, 'books', bookId, subcollection, String(i));
+        await setDoc(chunkRef, {
+          chunkIndex: i,
+          totalChunks,
+          data: chunk.toString('base64')
+        });
+      }
+
+      console.log(`Saved ${buffer.length} bytes into ${totalChunks} persistent Firestore chunks for ${subcollection}/${bookId}`);
+      return true;
+    } catch (err: any) {
+      console.warn(`Could not save ${subcollection} chunks for book ${bookId} (safe fallback to disk snapshot):`, err?.message || err);
+      return false;
     }
-
-    console.log(`Saved ${buffer.length} bytes into ${totalChunks} persistent Firestore chunks for ${subcollection}/${bookId}`);
   }
 
   /**
@@ -348,11 +356,19 @@ export class DatabaseService {
     const book = this.getBookById(bookId);
     if (!book) return null;
 
-    // 1. Try local disk cache
-    if (book.pdf_path && fs.existsSync(book.pdf_path)) {
-      try {
-        return fs.readFileSync(book.pdf_path);
-      } catch {}
+    // 1. Try local disk cache (exact path or relative within PDFS_DIR)
+    if (book.pdf_path) {
+      if (fs.existsSync(book.pdf_path)) {
+        try {
+          return fs.readFileSync(book.pdf_path);
+        } catch {}
+      }
+      const altPath = path.join(PDFS_DIR, path.basename(book.pdf_path));
+      if (fs.existsSync(altPath)) {
+        try {
+          return fs.readFileSync(altPath);
+        } catch {}
+      }
     }
 
     // 2. Fetch from persistent Cloud Firestore chunks
@@ -384,11 +400,19 @@ export class DatabaseService {
     const book = this.getBookById(bookId);
     if (!book) return null;
 
-    // 1. Try local disk cache
-    if (book.cover_path && fs.existsSync(book.cover_path)) {
-      try {
-        return fs.readFileSync(book.cover_path);
-      } catch {}
+    // 1. Try local disk cache (exact path or relative within COVERS_DIR)
+    if (book.cover_path) {
+      if (fs.existsSync(book.cover_path)) {
+        try {
+          return fs.readFileSync(book.cover_path);
+        } catch {}
+      }
+      const altPath = path.join(COVERS_DIR, path.basename(book.cover_path));
+      if (fs.existsSync(altPath)) {
+        try {
+          return fs.readFileSync(altPath);
+        } catch {}
+      }
     }
 
     // 2. Fetch from persistent Cloud Firestore chunks
@@ -396,7 +420,7 @@ export class DatabaseService {
     if (fromFirestore) {
       try {
         ensureDirectories();
-        const ext = book.cover_url.endsWith('.png') ? '.png' : '.jpg';
+        const ext = book.cover_url && book.cover_url.endsWith('.png') ? '.png' : '.jpg';
         const safeFilename = `cover_${slugify(book.title || 'book')}_${book.id}${ext}`;
         const localPath = path.join(COVERS_DIR, safeFilename);
         fs.writeFileSync(localPath, fromFirestore);
@@ -631,22 +655,10 @@ export class DatabaseService {
         }
       }
 
-      // Step 2: Store binary PDF chunks permanently in Cloud Firestore
+      // Step 2: Write physical PDF file to local persistent storage immediately
       let pdfUrl = data.pdf_url || `/api/pdf/${id}`;
       let pdfPath = data.pdf_path || '';
       if (pdfBuffer) {
-        await this.saveBufferToChunks(id, 'pdf_chunks', pdfBuffer);
-
-        // Step 3: Verify all PDF chunks in Firestore
-        if (this.firestore) {
-          const expectedChunks = Math.ceil(pdfBuffer.length / CHUNK_SIZE);
-          const pdfSnap = await getDocs(collection(this.firestore, 'books', id, 'pdf_chunks'));
-          if (pdfSnap.docs.length !== expectedChunks) {
-            throw new Error(`PDF chunk verification failed: expected ${expectedChunks} chunks, but found ${pdfSnap.docs.length}`);
-          }
-        }
-
-        // Cache locally on current instance
         const safeFilename = `${slugify(data.title || 'book')}_${id}.pdf`;
         pdfPath = path.join(PDFS_DIR, safeFilename);
         fs.writeFileSync(pdfPath, pdfBuffer);
@@ -654,21 +666,10 @@ export class DatabaseService {
         pdfUrl = `/uploads/pdfs/${safeFilename}`;
       }
 
-      // Step 4: Store binary Cover chunks permanently in Cloud Firestore
+      // Step 3: Write physical Cover file to local persistent storage immediately
       let coverUrl = data.cover_url || '';
       let coverPath = data.cover_path || '';
       if (coverBuffer) {
-        await this.saveBufferToChunks(id, 'cover_chunks', coverBuffer);
-
-        // Step 5: Verify all Cover chunks in Firestore
-        if (this.firestore) {
-          const expectedChunks = Math.ceil(coverBuffer.length / CHUNK_SIZE);
-          const coverSnap = await getDocs(collection(this.firestore, 'books', id, 'cover_chunks'));
-          if (coverSnap.docs.length !== expectedChunks) {
-            throw new Error(`Cover chunk verification failed: expected ${expectedChunks} chunks, but found ${coverSnap.docs.length}`);
-          }
-        }
-
         const ext = originalCoverName && path.extname(originalCoverName).toLowerCase() ? path.extname(originalCoverName).toLowerCase() : '.jpg';
         const safeFilename = `cover_${slugify(data.title || 'book')}_${id}${ext}`;
         coverPath = path.join(COVERS_DIR, safeFilename);
@@ -698,35 +699,35 @@ export class DatabaseService {
         updated_at: now
       };
 
-      // Step 6: Save metadata record to Cloud Firestore
-      if (this.firestore) {
-        await setDoc(doc(this.firestore, 'books', id), cleanForFirestore(book));
-
-        // Step 7: Verify Firestore book document exists
-        const verifyDoc = await getDoc(doc(this.firestore, 'books', id));
-        if (!verifyDoc.exists()) {
-          throw new Error('Firestore document write verification failed.');
-        }
-        console.log(`Verified book "${book.title}" (${id}) permanently committed to Cloud Firestore.`);
-      }
-
-      // Step 8: Commit to memory & local snapshot
+      // Step 4: Commit book to memory and persistent snapshot immediately
       this.books.unshift(book);
       this.saveLocalSnapshot();
+
+      // Step 5: Persist metadata & binary chunks to Cloud Firestore with fault tolerance
+      if (this.firestore) {
+        try {
+          await setDoc(doc(this.firestore, 'books', id), cleanForFirestore(book));
+          console.log(`Persisted book "${book.title}" (${id}) metadata to Cloud Firestore.`);
+        } catch (fsErr) {
+          console.warn(`Firestore metadata write note (persisted safely to disk and snapshot):`, fsErr);
+        }
+
+        // Asynchronously persist chunks to Cloud Firestore
+        if (pdfBuffer) {
+          this.saveBufferToChunks(id, 'pdf_chunks', pdfBuffer).catch(e =>
+            console.warn(`Firestore PDF chunk persistence note:`, e?.message || e)
+          );
+        }
+        if (coverBuffer) {
+          this.saveBufferToChunks(id, 'cover_chunks', coverBuffer).catch(e =>
+            console.warn(`Firestore cover chunk persistence note:`, e?.message || e)
+          );
+        }
+      }
+
       return book;
     } catch (err) {
       console.error(`Atomic upload transaction failed for book ${id}:`, err);
-      if (this.firestore) {
-        try {
-          await deleteDoc(doc(this.firestore, 'books', id));
-          const pChunks = await getDocs(collection(this.firestore, 'books', id, 'pdf_chunks'));
-          await Promise.all(pChunks.docs.map(d => deleteDoc(d.ref)));
-          const cChunks = await getDocs(collection(this.firestore, 'books', id, 'cover_chunks'));
-          await Promise.all(cChunks.docs.map(d => deleteDoc(d.ref)));
-        } catch (cleanupErr) {
-          console.warn('Rollback chunk cleanup note:', cleanupErr);
-        }
-      }
       if (createdPdfPath && fs.existsSync(createdPdfPath)) {
         try { fs.unlinkSync(createdPdfPath); } catch {}
       }

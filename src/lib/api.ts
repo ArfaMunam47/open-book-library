@@ -326,19 +326,45 @@ export async function analyzeBookPdf(file: File): Promise<DetectedBookMetadata> 
  * On-demand description generation / regeneration
  */
 export async function generateBookDescriptionApi(params: {
+  pdfFile?: File | null;
   bookId?: string;
   title?: string;
   author?: string;
   categoryId?: string;
 }): Promise<string> {
-  const res = await fetch('/api/admin/generate-description', {
-    method: 'POST',
-    headers: {
-      ...getAuthHeaders(),
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(params)
-  });
+  const authHeaders = getAuthHeaders();
+  let res: Response;
+
+  if (params.pdfFile) {
+    const formData = new FormData();
+    formData.append('pdf', params.pdfFile);
+    if (params.bookId) formData.append('bookId', params.bookId);
+    if (params.title) formData.append('title', params.title);
+    if (params.author) formData.append('author', params.author);
+    if (params.categoryId) formData.append('categoryId', params.categoryId);
+
+    res = await fetch('/api/admin/generate-description', {
+      method: 'POST',
+      headers: {
+        ...authHeaders
+      },
+      body: formData
+    });
+  } else {
+    res = await fetch('/api/admin/generate-description', {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bookId: params.bookId,
+        title: params.title,
+        author: params.author,
+        categoryId: params.categoryId
+      })
+    });
+  }
 
   const data = await res.json();
   if (!res.ok) {

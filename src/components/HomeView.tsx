@@ -259,13 +259,6 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 />
 
               </div>
-                  <Sparkles className="w-3.5 h-3.5 text-[#A52A22]" />
-                  <span className="text-[11px] font-medium text-[#181512] font-sans">
-                    Step inside the library →
-                  </span>
-                </div>
-
-              </div>
 
               {/* Bottom-Right Curved Decorative Stamp matching reference */}
               <div 
