@@ -463,6 +463,16 @@ app.get('/api/admin/stats', requireAdminAuth, (req: Request, res: Response) => {
   }
 });
 
+// Admin: Get persistence, quota, and storage health report
+app.get('/api/admin/system-health', requireAdminAuth, (req: Request, res: Response) => {
+  try {
+    const health = db.getQuotaStatus();
+    res.json(health);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to fetch health report' });
+  }
+});
+
 // Admin: Get all books (published and unpublished)
 app.get('/api/admin/books', requireAdminAuth, (req: Request, res: Response) => {
   try {
@@ -626,6 +636,8 @@ app.post(
       }
 
       const {
+        id: bodyId,
+        client_id,
         title,
         author,
         description,
@@ -692,6 +704,7 @@ app.post(
       const coverBuffer = coverFile && fs.existsSync(coverFile.path) ? fs.readFileSync(coverFile.path) : undefined;
 
       const newBook = await db.createBook({
+        id: client_id || bodyId,
         title: title.trim(),
         author: author && author.trim() ? author.trim() : (pdfMetadata.author || 'Unknown Author'),
         description: description ? description.trim() : '',

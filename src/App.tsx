@@ -180,26 +180,22 @@ export default function App() {
     : undefined;
 
   return (
-    <div className={`min-h-screen flex flex-col font-sans transition-colors ${
-      currentView.type === 'home' 
-        ? 'bg-[#F7F3EC] text-[#181512] selection:bg-[#A52A22] selection:text-white' 
-        : 'bg-[#FFF9F1] text-[#4D5158] selection:bg-[#FFDDD5] selection:text-[#10243B]'
-    }`}>
+    <div className="min-h-screen flex flex-col font-sans transition-colors bg-[#F8F8F4] text-[#292A27] selection:bg-[#E8EAE2] selection:text-[#292A27]">
       
       {/* Toast Notification */}
       {toast && (
         <div className="fixed bottom-5 right-5 z-50 animate-fade-in">
-          <div className={`p-4 rounded-lg shadow-lg border text-xs flex items-center gap-2.5 max-w-sm ${
+          <div className={`p-4 rounded-xl shadow-lg border text-xs flex items-center gap-2.5 max-w-sm ${
             toast.type === 'success' 
-              ? 'bg-[#10243B] text-white border-[#1B3654]' 
-              : 'bg-[#F1262D] text-white border-red-700'
+              ? 'bg-[#292A27] text-[#F8F8F4] border-[#292A27]' 
+              : 'bg-[#C98187] text-white border-[#B26B71]'
           }`}>
             {toast.type === 'success' ? (
-              <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+              <CheckCircle className="w-4 h-4 text-[#E8EAE2] shrink-0" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-red-200 shrink-0" />
+              <AlertCircle className="w-4 h-4 text-white shrink-0" />
             )}
-            <span>{toast.message}</span>
+            <span className="font-medium">{toast.message}</span>
           </div>
         </div>
       )}
@@ -381,8 +377,8 @@ export default function App() {
       </main>
     </div>
 
-      {/* Footer (hidden inside full-screen PDF reader and minimalist homepage) */}
-      {currentView.type !== 'pdf-reader' && currentView.type !== 'home' && (
+      {/* Footer (hidden inside full-screen PDF reader) */}
+      {currentView.type !== 'pdf-reader' && (
         <Footer
           onNavigateHome={() => navigateTo({ type: 'home' })}
           onNavigateBooks={() => navigateTo({ type: 'books' })}
@@ -393,45 +389,45 @@ export default function App() {
 
       {/* About OpenBook Library Modal */}
       {showAboutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-950/60 backdrop-blur-xs animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl border border-[#E8E8E2] shadow-2xl max-w-lg w-full p-6 sm:p-8 space-y-6 relative text-[#292A27]">
             <button
               onClick={() => setShowAboutModal(false)}
-              className="absolute top-5 right-5 p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-lg transition-colors cursor-pointer"
+              className="absolute top-5 right-5 p-1.5 text-[#85857E] hover:text-[#292A27] hover:bg-[#E8EAE2] rounded-lg transition-colors cursor-pointer"
               aria-label="Close dialog"
             >
               <X className="w-4 h-4" />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-stone-900 text-amber-100 flex items-center justify-center border border-amber-900/40">
-                <Library className="w-5 h-5" />
+              <div className="w-10 h-10 rounded-xl bg-[#292A27] text-[#F8F8F4] flex items-center justify-center shadow-xs">
+                <Library className="w-5 h-5 text-[#E8EAE2]" />
               </div>
               <div>
-                <h3 className="font-serif text-xl font-bold text-stone-900">
+                <h3 className="font-editorial text-xl font-bold text-[#292A27]">
                   About OpenBook Library
                 </h3>
-                <span className="text-[10px] tracking-widest uppercase font-semibold text-amber-900 block">
+                <span className="text-[10px] tracking-widest uppercase font-semibold text-[#C98187] block font-sans">
                   Free Digital Public Collection
                 </span>
               </div>
             </div>
 
-            <div className="space-y-3.5 text-xs text-stone-600 leading-relaxed font-sans">
+            <div className="space-y-3.5 text-xs text-[#85857E] leading-relaxed font-sans">
               <p>
                 OpenBook Library is a free, non-commercial digital bookstore dedicated to the democratization of literature, self-education, and lifelong knowledge.
               </p>
               <p>
                 All books cataloged are preserved using permanent Cloud Firestore chunk storage, guaranteeing high-resolution unabridged editions that are completely free to read online or download.
               </p>
-              <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200/80 space-y-2">
-                <div className="flex items-center gap-2 font-bold text-stone-900">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <div className="p-3.5 bg-[#F8F8F4] rounded-xl border border-[#E8E8E2] space-y-2">
+                <div className="flex items-center gap-2 font-bold text-[#292A27]">
+                  <ShieldCheck className="w-4 h-4 text-[#C98187]" />
                   <span>Reader Guarantees</span>
                 </div>
-                <ul className="space-y-1 text-stone-500 list-disc list-inside">
+                <ul className="space-y-1 text-[#85857E] list-disc list-inside">
                   <li>Zero user registration or login required for readers</li>
-                  <li>Instant web browser PDF reading with zoom & search</li>
+                  <li>Instant web browser PDF reading with zoom &amp; search</li>
                   <li>Direct full-file PDF downloads for offline reading</li>
                   <li>Permanent multi-region cloud preservation</li>
                 </ul>
@@ -441,7 +437,7 @@ export default function App() {
             <div className="pt-2 flex justify-end">
               <button
                 onClick={() => setShowAboutModal(false)}
-                className="px-5 py-2.5 bg-stone-900 hover:bg-stone-800 text-white rounded-xl text-xs font-semibold transition-colors cursor-pointer"
+                className="px-5 py-2.5 bg-[#292A27] hover:bg-[#3E403B] text-white rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer"
               >
                 Return to Bookstore
               </button>

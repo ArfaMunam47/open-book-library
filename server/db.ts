@@ -11,6 +11,8 @@ import {
   collection,
   deleteDoc,
   writeBatch,
+  query,
+  limit,
   setLogLevel
 } from 'firebase/firestore/lite';
 
@@ -41,6 +43,8 @@ export interface Book {
   publisher?: string;
   publication_year?: number;
   metadata_confidence?: 'High' | 'Medium' | 'Low';
+  has_pdf_chunks?: boolean;
+  has_cover_chunks?: boolean;
   published: boolean;
   created_at: string;
   updated_at: string;
@@ -106,6 +110,8 @@ export class DatabaseService {
   private books: Book[] = [];
   private initialized = false;
   private initPromise: Promise<void> | null = null;
+  private isReadQuotaExhausted = false;
+  private quotaExhaustedTime: number | null = null;
 
   constructor() {
     this.initPromise = this.init();
@@ -115,6 +121,32 @@ export class DatabaseService {
     if (this.initPromise) {
       await this.initPromise;
     }
+  }
+
+  getQuotaStatus() {
+    const onDiskPdfs = this.books.filter(b => {
+      if (!b.pdf_path) return false;
+      const basename = path.basename(b.pdf_path);
+      return fs.existsSync(path.join(PDFS_DIR, basename)) || fs.existsSync(b.pdf_path);
+    }).length;
+
+    const onDiskCovers = this.books.filter(b => {
+      if (!b.cover_path && !b.cover_url) return false;
+      const basename = path.basename(b.cover_path || b.cover_url);
+      return fs.existsSync(path.join(COVERS_DIR, basename)) || (b.cover_path && fs.existsSync(b.cover_path));
+    }).length;
+
+    return {
+      isReadQuotaExhausted: this.isReadQuotaExhausted,
+      quotaExhaustedTime: this.quotaExhaustedTime,
+      totalBooks: this.books.length,
+      publishedBooks: this.books.filter(b => b.published).length,
+      unpublishedBooks: this.books.filter(b => !b.published).length,
+      totalCategories: this.categories.length,
+      validPdfCount: onDiskPdfs,
+      validCoverCount: onDiskCovers,
+      backupPath: 'data/backups/verified_backup_1792255269490'
+    };
   }
 
   private async init() {
@@ -146,8 +178,14 @@ export class DatabaseService {
     if (this.firestore) {
       try {
         await this.syncFromFirestore();
-      } catch (err) {
-        console.warn('Error reading from Cloud Firestore, using local snapshot:', err);
+      } catch (err: any) {
+        if (err?.code === 'resource-exhausted' || String(err?.message || '').toLowerCase().includes('quota')) {
+          this.isReadQuotaExhausted = true;
+          this.quotaExhaustedTime = Date.now();
+          console.warn('Cloud Firestore daily read quota reached. Preserving all local records safely.');
+        } else {
+          console.warn('Error reading from Cloud Firestore, using local snapshot:', err);
+        }
       }
     }
 
@@ -156,8 +194,10 @@ export class DatabaseService {
       await this.seedCategories();
     }
 
-    // 5. Perform migration from local files if needed
-    await this.migrateLocalDataToFirestore();
+    // 5. Perform migration from local files if needed (only if quota is not exhausted)
+    if (!this.isReadQuotaExhausted) {
+      await this.migrateLocalDataToFirestore();
+    }
 
     this.initialized = true;
   }
@@ -180,45 +220,77 @@ export class DatabaseService {
   }
 
   private async syncFromFirestore() {
-    if (!this.firestore) return;
+    if (!this.firestore || this.isReadQuotaExhausted) return;
 
-    // Load categories
-    const catSnap = await getDocs(collection(this.firestore, 'categories'));
-    if (!catSnap.empty) {
-      const remoteCategories = catSnap.docs.map(d => ({ ...(d.data() as Category), id: d.id }));
-      for (const rc of remoteCategories) {
-        const idx = this.categories.findIndex(c => c.id === rc.id);
-        if (idx >= 0) {
-          this.categories[idx] = rc;
-        } else {
-          this.categories.push(rc);
+    try {
+      // Load categories
+      const catSnap = await getDocs(collection(this.firestore, 'categories'));
+      if (!catSnap.empty) {
+        const remoteCategories = catSnap.docs.map(d => ({ ...(d.data() as Category), id: d.id }));
+        for (const rc of remoteCategories) {
+          const idx = this.categories.findIndex(c => c.id === rc.id);
+          if (idx >= 0) {
+            this.categories[idx] = rc;
+          } else {
+            this.categories.push(rc);
+          }
+        }
+      } else if (this.categories.length > 0) {
+        for (const cat of this.categories) {
+          await setDoc(doc(this.firestore, 'categories', cat.id), cat).catch(console.warn);
         }
       }
-    } else if (this.categories.length > 0) {
-      for (const cat of this.categories) {
-        await setDoc(doc(this.firestore, 'categories', cat.id), cat).catch(console.warn);
+
+      // Load books
+      const bookSnap = await getDocs(collection(this.firestore, 'books'));
+      if (!bookSnap.empty) {
+        // Remote Firestore is authoritative, but merge safely so any un-synced book is preserved
+        const remoteBooks = bookSnap.docs.map(d => ({ ...(d.data() as Book), id: d.id }));
+        const remoteMap = new Map<string, Book>();
+        for (const rb of remoteBooks) {
+          remoteMap.set(rb.id, rb);
+          const idx = this.books.findIndex(b => b.id === rb.id);
+          if (idx >= 0) {
+            const local = this.books[idx];
+            this.books[idx] = {
+              ...rb,
+              pdf_path: local.pdf_path || rb.pdf_path,
+              cover_path: local.cover_path || rb.cover_path,
+              has_pdf_chunks: rb.has_pdf_chunks ?? local.has_pdf_chunks,
+              has_cover_chunks: rb.has_cover_chunks ?? local.has_cover_chunks
+            };
+          } else {
+            this.books.push(rb);
+          }
+        }
+        // If any local book exists that is not yet in Firestore, sync it up to Firestore
+        for (const localBook of this.books) {
+          if (!remoteMap.has(localBook.id)) {
+            await setDoc(doc(this.firestore, 'books', localBook.id), cleanForFirestore(localBook)).catch(console.warn);
+          }
+        }
+      } else if (this.books.length > 0) {
+        // Firestore is empty: perform initial push of existing local books
+        for (const lb of this.books) {
+          await setDoc(doc(this.firestore, 'books', lb.id), cleanForFirestore(lb)).catch(console.warn);
+          console.log(`Synced local book "${lb.title}" to persistent Firestore.`);
+        }
+      }
+
+      // Sort books newest first
+      this.books.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+      // Update local snapshot file
+      this.saveLocalSnapshot();
+    } catch (err: any) {
+      if (err?.code === 'resource-exhausted' || String(err?.message || '').toLowerCase().includes('quota')) {
+        this.isReadQuotaExhausted = true;
+        this.quotaExhaustedTime = Date.now();
+        console.warn('Cloud Firestore daily read quota reached during sync. Preserving local snapshot.');
+      } else {
+        throw err;
       }
     }
-
-    // Load books
-    const bookSnap = await getDocs(collection(this.firestore, 'books'));
-    if (!bookSnap.empty) {
-      // Remote Firestore is the authoritative source of truth
-      const remoteBooks = bookSnap.docs.map(d => ({ ...(d.data() as Book), id: d.id }));
-      this.books = remoteBooks;
-    } else if (this.books.length > 0) {
-      // Firestore is empty: perform initial push of existing local books
-      for (const lb of this.books) {
-        await setDoc(doc(this.firestore, 'books', lb.id), cleanForFirestore(lb)).catch(console.warn);
-        console.log(`Synced local book "${lb.title}" to persistent Firestore.`);
-      }
-    }
-
-    // Sort books newest first
-    this.books.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
-    // Update local snapshot file
-    this.saveLocalSnapshot();
   }
 
   private saveLocalSnapshot() {
@@ -264,17 +336,26 @@ export class DatabaseService {
    * to persistent Cloud Firestore chunks so they never disappear.
    */
   private async migrateLocalDataToFirestore() {
-    if (!this.firestore) return;
+    if (!this.firestore || this.isReadQuotaExhausted) return;
 
-    // Only persist chunks for authoritative books if their disk files exist and chunks are missing
     for (const book of this.books) {
-      if (book.pdf_path && fs.existsSync(book.pdf_path)) {
+      if (this.isReadQuotaExhausted) break;
+
+      if (!book.has_pdf_chunks && book.pdf_path && fs.existsSync(book.pdf_path)) {
         const ok = await this.persistFileToChunks(book.id, 'pdf_chunks', book.pdf_path);
-        if (!ok) break; // If quota or error encountered, stop loop gracefully
+        if (ok) {
+          book.has_pdf_chunks = true;
+        } else if (this.isReadQuotaExhausted) {
+          break;
+        }
       }
-      if (book.cover_path && fs.existsSync(book.cover_path)) {
+      if (!book.has_cover_chunks && book.cover_path && fs.existsSync(book.cover_path)) {
         const ok = await this.persistFileToChunks(book.id, 'cover_chunks', book.cover_path);
-        if (!ok) break;
+        if (ok) {
+          book.has_cover_chunks = true;
+        } else if (this.isReadQuotaExhausted) {
+          break;
+        }
       }
     }
   }
@@ -283,11 +364,11 @@ export class DatabaseService {
    * Persists a binary file from disk into Firestore chunks.
    */
   async persistFileToChunks(bookId: string, subcollection: 'pdf_chunks' | 'cover_chunks', filePath: string): Promise<boolean> {
-    if (!this.firestore || !fs.existsSync(filePath)) return false;
+    if (!this.firestore || !fs.existsSync(filePath) || this.isReadQuotaExhausted) return false;
 
     try {
-      // Check if already persisted
-      const checkSnap = await getDocs(collection(this.firestore, 'books', bookId, subcollection));
+      // Check if already persisted using limit(1) to consume only 1 document read unit
+      const checkSnap = await getDocs(query(collection(this.firestore, 'books', bookId, subcollection), limit(1)));
       if (!checkSnap.empty) {
         return true; // Already stored in Firestore
       }
@@ -295,8 +376,12 @@ export class DatabaseService {
       const buffer = fs.readFileSync(filePath);
       await this.saveBufferToChunks(bookId, subcollection, buffer);
       return true;
-    } catch (err) {
-      console.warn(`Could not persist ${subcollection} for book ${bookId}:`, err);
+    } catch (err: any) {
+      if (err?.code === 'resource-exhausted' || String(err?.message || '').toLowerCase().includes('quota')) {
+        this.isReadQuotaExhausted = true;
+        this.quotaExhaustedTime = Date.now();
+      }
+      console.warn(`Could not persist ${subcollection} for book ${bookId}:`, err?.message || err);
       return false;
     }
   }
@@ -331,7 +416,7 @@ export class DatabaseService {
    * Retrieves and reassembles a file buffer from persistent Firestore chunks.
    */
   async getBufferFromChunks(bookId: string, subcollection: 'pdf_chunks' | 'cover_chunks'): Promise<Buffer | null> {
-    if (!this.firestore) return null;
+    if (!this.firestore || this.isReadQuotaExhausted) return null;
 
     try {
       const snap = await getDocs(collection(this.firestore, 'books', bookId, subcollection));
@@ -341,8 +426,14 @@ export class DatabaseService {
       chunks.sort((a, b) => a.chunkIndex - b.chunkIndex);
 
       return Buffer.concat(chunks.map(c => Buffer.from(c.data, 'base64')));
-    } catch (err) {
-      console.warn(`Failed to read chunks for ${subcollection}/${bookId}:`, err);
+    } catch (err: any) {
+      if (err?.code === 'resource-exhausted' || String(err?.message || '').toLowerCase().includes('quota')) {
+        this.isReadQuotaExhausted = true;
+        this.quotaExhaustedTime = Date.now();
+        console.warn(`Firestore read quota reached while fetching chunks for ${subcollection}/${bookId}`);
+      } else {
+        console.warn(`Failed to read chunks for ${subcollection}/${bookId}:`, err);
+      }
       return null;
     }
   }
@@ -356,13 +447,14 @@ export class DatabaseService {
     const book = this.getBookById(bookId);
     if (!book) return null;
 
-    // 1. Try local disk cache (exact path or relative within PDFS_DIR)
+    // 1. Try local disk cache with exhaustive name matching
+    if (book.pdf_path && fs.existsSync(book.pdf_path)) {
+      try {
+        return fs.readFileSync(book.pdf_path);
+      } catch {}
+    }
+
     if (book.pdf_path) {
-      if (fs.existsSync(book.pdf_path)) {
-        try {
-          return fs.readFileSync(book.pdf_path);
-        } catch {}
-      }
       const altPath = path.join(PDFS_DIR, path.basename(book.pdf_path));
       if (fs.existsSync(altPath)) {
         try {
@@ -370,6 +462,25 @@ export class DatabaseService {
         } catch {}
       }
     }
+
+    const safeSlugPath = path.join(PDFS_DIR, `${slugify(book.title || 'book')}_${book.id}.pdf`);
+    if (fs.existsSync(safeSlugPath)) {
+      try {
+        return fs.readFileSync(safeSlugPath);
+      } catch {}
+    }
+
+    // Scan PDFS_DIR for any file containing bookId
+    try {
+      if (fs.existsSync(PDFS_DIR)) {
+        const files = fs.readdirSync(PDFS_DIR);
+        const match = files.find(f => f.includes(bookId) && f.endsWith('.pdf'));
+        if (match) {
+          const matchPath = path.join(PDFS_DIR, match);
+          return fs.readFileSync(matchPath);
+        }
+      }
+    } catch {}
 
     // 2. Fetch from persistent Cloud Firestore chunks
     const fromFirestore = await this.getBufferFromChunks(bookId, 'pdf_chunks');
@@ -400,13 +511,14 @@ export class DatabaseService {
     const book = this.getBookById(bookId);
     if (!book) return null;
 
-    // 1. Try local disk cache (exact path or relative within COVERS_DIR)
+    // 1. Try local disk cache with exhaustive name matching
+    if (book.cover_path && fs.existsSync(book.cover_path)) {
+      try {
+        return fs.readFileSync(book.cover_path);
+      } catch {}
+    }
+
     if (book.cover_path) {
-      if (fs.existsSync(book.cover_path)) {
-        try {
-          return fs.readFileSync(book.cover_path);
-        } catch {}
-      }
       const altPath = path.join(COVERS_DIR, path.basename(book.cover_path));
       if (fs.existsSync(altPath)) {
         try {
@@ -414,6 +526,32 @@ export class DatabaseService {
         } catch {}
       }
     }
+
+    const safeSlugPng = path.join(COVERS_DIR, `cover_${slugify(book.title || 'book')}_${book.id}.png`);
+    if (fs.existsSync(safeSlugPng)) {
+      try {
+        return fs.readFileSync(safeSlugPng);
+      } catch {}
+    }
+
+    const safeSlugJpg = path.join(COVERS_DIR, `cover_${slugify(book.title || 'book')}_${book.id}.jpg`);
+    if (fs.existsSync(safeSlugJpg)) {
+      try {
+        return fs.readFileSync(safeSlugJpg);
+      } catch {}
+    }
+
+    // Scan COVERS_DIR for any file containing bookId
+    try {
+      if (fs.existsSync(COVERS_DIR)) {
+        const files = fs.readdirSync(COVERS_DIR);
+        const match = files.find(f => f.includes(bookId));
+        if (match) {
+          const matchPath = path.join(COVERS_DIR, match);
+          return fs.readFileSync(matchPath);
+        }
+      }
+    } catch {}
 
     // 2. Fetch from persistent Cloud Firestore chunks
     const fromFirestore = await this.getBufferFromChunks(bookId, 'cover_chunks');
@@ -618,6 +756,7 @@ export class DatabaseService {
    */
   async createBook(
     data: {
+      id?: string;
       title: string;
       author?: string;
       description?: string;
@@ -639,7 +778,16 @@ export class DatabaseService {
     originalPdfName: string = 'book.pdf',
     originalCoverName?: string
   ): Promise<Book> {
-    const id = `book-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    // Idempotency: If client supplied stable ID, check if already created
+    if (data.id) {
+      const existing = this.getBookById(data.id);
+      if (existing) {
+        console.log(`Idempotent request: book with id ${data.id} already exists.`);
+        return existing;
+      }
+    }
+
+    const id = data.id || `book-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
 
     ensureDirectories();
@@ -651,11 +799,11 @@ export class DatabaseService {
       // Step 1: Validate PDF if provided
       if (pdfBuffer) {
         if (pdfBuffer.length < 10 || !pdfBuffer.subarray(0, 5).toString('ascii').startsWith('%PDF-')) {
-          throw new Error('Invalid PDF format: file does not contain valid PDF magic bytes header.');
+          throw new Error('Invalid PDF format: file does not contain valid PDF magic bytes header (%PDF-).');
         }
       }
 
-      // Step 2: Write physical PDF file to local persistent storage immediately
+      // Step 2: Write physical PDF file to local persistent storage immediately and verify bytes
       let pdfUrl = data.pdf_url || `/api/pdf/${id}`;
       let pdfPath = data.pdf_path || '';
       if (pdfBuffer) {
@@ -664,9 +812,15 @@ export class DatabaseService {
         fs.writeFileSync(pdfPath, pdfBuffer);
         createdPdfPath = pdfPath;
         pdfUrl = `/uploads/pdfs/${safeFilename}`;
+
+        // Verify written file size matches buffer
+        const stat = fs.statSync(pdfPath);
+        if (stat.size !== pdfBuffer.length) {
+          throw new Error(`PDF storage verification failed: wrote ${stat.size} bytes, expected ${pdfBuffer.length} bytes.`);
+        }
       }
 
-      // Step 3: Write physical Cover file to local persistent storage immediately
+      // Step 3: Write physical Cover file to local persistent storage immediately and verify
       let coverUrl = data.cover_url || '';
       let coverPath = data.cover_path || '';
       if (coverBuffer) {
@@ -676,6 +830,11 @@ export class DatabaseService {
         fs.writeFileSync(coverPath, coverBuffer);
         createdCoverPath = coverPath;
         coverUrl = `/uploads/covers/${safeFilename}`;
+
+        const stat = fs.statSync(coverPath);
+        if (stat.size !== coverBuffer.length) {
+          throw new Error(`Cover storage verification failed: wrote ${stat.size} bytes, expected ${coverBuffer.length} bytes.`);
+        }
       }
 
       const book: Book = {
@@ -703,26 +862,37 @@ export class DatabaseService {
       this.books.unshift(book);
       this.saveLocalSnapshot();
 
-      // Step 5: Persist metadata & binary chunks to Cloud Firestore with fault tolerance
+      // Step 5: Persist metadata & binary chunks to Cloud Firestore
       if (this.firestore) {
         try {
           await setDoc(doc(this.firestore, 'books', id), cleanForFirestore(book));
           console.log(`Persisted book "${book.title}" (${id}) metadata to Cloud Firestore.`);
         } catch (fsErr) {
-          console.warn(`Firestore metadata write note (persisted safely to disk and snapshot):`, fsErr);
+          console.warn(`Firestore metadata write notice (persisted safely to disk and snapshot):`, fsErr);
         }
 
-        // Asynchronously persist chunks to Cloud Firestore
+        // Persist binary chunks to Cloud Firestore (writes succeed even if daily read quota is reached)
         if (pdfBuffer) {
-          this.saveBufferToChunks(id, 'pdf_chunks', pdfBuffer).catch(e =>
-            console.warn(`Firestore PDF chunk persistence note:`, e?.message || e)
-          );
+          try {
+            const saved = await this.saveBufferToChunks(id, 'pdf_chunks', pdfBuffer);
+            if (saved) {
+              book.has_pdf_chunks = true;
+            }
+          } catch (e: any) {
+            console.warn(`Firestore PDF chunk persistence warning:`, e?.message || e);
+          }
         }
         if (coverBuffer) {
-          this.saveBufferToChunks(id, 'cover_chunks', coverBuffer).catch(e =>
-            console.warn(`Firestore cover chunk persistence note:`, e?.message || e)
-          );
+          try {
+            const saved = await this.saveBufferToChunks(id, 'cover_chunks', coverBuffer);
+            if (saved) {
+              book.has_cover_chunks = true;
+            }
+          } catch (e: any) {
+            console.warn(`Firestore cover chunk persistence warning:`, e?.message || e);
+          }
         }
+        this.saveLocalSnapshot();
       }
 
       return book;

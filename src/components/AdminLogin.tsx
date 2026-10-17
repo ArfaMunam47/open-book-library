@@ -74,25 +74,25 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onSuccess, onCancel }) =
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="Enter admin password..."
-                className="w-full px-3 py-2 pl-9 text-sm bg-white border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-900/20 focus:border-amber-900"
+                className="w-full px-3 py-2 pl-9 text-sm bg-white border border-[#E8E8E2] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C98187]/20 focus:border-[#C98187]"
               />
-              <KeyRound className="w-4 h-4 text-stone-400 absolute left-3 top-2.5" />
+              <KeyRound className="w-4 h-4 text-[#85857E] absolute left-3 top-2.5" />
             </div>
-            <p className="text-[11px] text-stone-500 mt-1.5">
-              Enter your administrator password (configured via <span className="font-mono text-stone-700 bg-stone-100 px-1 py-0.5 rounded">ADMIN_PASSWORD</span> or default <span className="font-mono text-stone-700 bg-stone-100 px-1 py-0.5 rounded">admin123</span>).
+            <p className="text-[11px] text-[#85857E] mt-1.5">
+              Enter your administrator password (configured via <span className="font-mono text-[#292A27] bg-[#E8EAE2] px-1 py-0.5 rounded">ADMIN_PASSWORD</span> or default <span className="font-mono text-[#292A27] bg-[#E8EAE2] px-1 py-0.5 rounded">admin123</span>).
             </p>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 bg-stone-900 hover:bg-stone-800 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            className="w-full py-2.5 px-4 bg-[#292A27] hover:bg-[#3E403B] text-white rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             {loading ? (
               <span>Authenticating...</span>
             ) : (
               <>
-                <ShieldCheck className="w-4 h-4" />
+                <ShieldCheck className="w-4 h-4 text-[#E8EAE2]" />
                 <span>Enter Admin Dashboard</span>
               </>
             )}

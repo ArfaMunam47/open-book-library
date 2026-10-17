@@ -47,12 +47,12 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           </div>
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-stone-100">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[#E8E8E2]">
           <button
             type="button"
             onClick={onCancel}
             disabled={isSubmitting}
-            className="px-4 py-2 text-xs font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded-md transition-colors disabled:opacity-50"
+            className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-[#85857E] bg-[#E8EAE2]/60 hover:bg-[#E8EAE2] rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
           >
             {cancelLabel}
           </button>
@@ -60,10 +60,10 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             type="button"
             onClick={onConfirm}
             disabled={isSubmitting}
-            className={`px-4 py-2 text-xs font-medium text-white rounded-md transition-colors flex items-center gap-1.5 disabled:opacity-50 ${
+            className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider text-white rounded-lg transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer ${
               isDestructive 
-                ? 'bg-red-700 hover:bg-red-800' 
-                : 'bg-stone-900 hover:bg-stone-800'
+                ? 'bg-[#C98187] hover:bg-[#B26B71]' 
+                : 'bg-[#292A27] hover:bg-[#3E403B]'
             }`}
           >
             {isSubmitting ? (

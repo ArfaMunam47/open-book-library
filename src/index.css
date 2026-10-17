@@ -1,10 +1,18 @@
 @import "tailwindcss";
 
 @theme {
+  --color-warm-bg: #F8F8F4;
+  --color-sage-soft: #E8EAE2;
+  --color-sage-muted: #DDE0D5;
+  --color-rose-dusty: #C98187;
+  --color-charcoal-deep: #292A27;
+  --color-gray-muted: #85857E;
+  --color-divider-subtle: #E8E8E2;
+  
   --font-serif: "Playfair Display", Georgia, "Times New Roman", serif;
   --font-editorial: "Playfair Display", Georgia, "Times New Roman", serif;
-  --font-sans: "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-body: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Inter", "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "DM Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-handwriting: "Caveat", cursive, sans-serif;
 }

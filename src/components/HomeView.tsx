@@ -1,7 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Book, Category } from '../types/library';
-import { ArrowRight, Search, BookOpen, Users, Lightbulb, Leaf, Sparkles, Compass } from 'lucide-react';
-import grandLibraryPortal from '../assets/images/grand_library_portal_transparent.webp';
+import { 
+  ArrowRight, 
+  Search, 
+  BookOpen, 
+  Users, 
+  Lightbulb, 
+  Leaf, 
+  Sparkles, 
+  Compass, 
+  Layers, 
+  CheckCircle2, 
+  TrendingUp, 
+  Briefcase, 
+  GraduationCap, 
+  Heart, 
+  Cpu, 
+  Sun, 
+  Library, 
+  LayoutGrid,
+  ExternalLink,
+  Download,
+  BookMarked
+} from 'lucide-react';
+import { downloadBookPdf, formatFileSize } from '../lib/api';
 
 interface HomeViewProps {
   books: Book[];
@@ -20,12 +42,15 @@ export const HomeView: React.FC<HomeViewProps> = ({
   categories = [],
   loading = false,
   onRefreshBooks,
+  onOpenBook,
+  onReadOnline,
   onSelectCategory,
   onNavigateBooks,
   onNavigateCategories,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [isHoveredArtwork, setIsHoveredArtwork] = useState(false);
+  const [selectedSearchCategory, setSelectedSearchCategory] = useState<string>('all');
+  const [hoveredBookId, setHoveredBookId] = useState<string | null>(null);
 
   // Automatically refresh book catalog on mount to guarantee real-time count
   useEffect(() => {
@@ -35,509 +60,614 @@ export const HomeView: React.FC<HomeViewProps> = ({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const query = searchQuery.trim();
-    onNavigateBooks(query || undefined);
-  };
-
-  // Smooth scroll to the second experience (exploration & features)
-  const handleScrollToExplore = () => {
-    const target = document.getElementById('exploration-section');
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth' });
-    }
+    const cat = selectedSearchCategory !== 'all' ? selectedSearchCategory : undefined;
+    onNavigateBooks(query || undefined, cat);
   };
 
   // Dynamic live count directly from database
   const bookCount = books.length;
 
+  // Curate 7 real books for the signature symmetrical hero cover composition
+  const heroBooks = useMemo(() => {
+    if (books.length === 0) return [];
+    
+    // Prioritize books with real covers
+    const withCovers = books.filter(b => Boolean(b.cover_url && b.cover_url.trim().length > 0));
+    const pool = withCovers.length >= 7 ? withCovers : books;
+
+    // Symmetrical layout needs 7 books:
+    // [farLeftTop, farLeftBottom], [midLeft], [centerHero], [midRight], [farRightTop, farRightBottom]
+    return pool.slice(0, 7);
+  }, [books]);
+
+  // Featured books for the "Deciding What to Read Next?" section (4 curated books)
+  const featuredBooks = useMemo(() => {
+    if (books.length <= 4) return books;
+    // Pick 4 diverse books from different categories if possible
+    const selected: Book[] = [];
+    const usedCats = new Set<string>();
+    
+    for (const b of books) {
+      if (!usedCats.has(b.category_id)) {
+        selected.push(b);
+        usedCats.add(b.category_id);
+      }
+      if (selected.length === 4) break;
+    }
+    
+    if (selected.length < 4) {
+      for (const b of books) {
+        if (!selected.some(s => s.id === b.id)) {
+          selected.push(b);
+        }
+        if (selected.length === 4) break;
+      }
+    }
+    return selected;
+  }, [books]);
+
+  // Dynamic count of books per category
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of books) {
+      map.set(b.category_id, (map.get(b.category_id) || 0) + 1);
+    }
+    return map;
+  }, [books]);
+
+  // Category Icon Resolver
+  const getCategoryIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('finance') || n.includes('money')) return <TrendingUp className="w-4.5 h-4.5" />;
+    if (n.includes('business')) return <Briefcase className="w-4.5 h-4.5" />;
+    if (n.includes('education')) return <GraduationCap className="w-4.5 h-4.5" />;
+    if (n.includes('tech') || n.includes('it')) return <Cpu className="w-4.5 h-4.5" />;
+    if (n.includes('health')) return <Heart className="w-4.5 h-4.5" />;
+    if (n.includes('fiction')) return <BookMarked className="w-4.5 h-4.5" />;
+    if (n.includes('religion') || n.includes('philosophy')) return <Sun className="w-4.5 h-4.5" />;
+    if (n.includes('family') || n.includes('relationships')) return <Users className="w-4.5 h-4.5" />;
+    return <Layers className="w-4.5 h-4.5" />;
+  };
+
+  // Typographic Cover Fallback Generator
+  const renderBookCover = (book: Book, className: string = '', isLarge: boolean = false) => {
+    if (book.cover_url) {
+      return (
+        <img
+          src={book.cover_url}
+          alt={`Cover of ${book.title}`}
+          referrerPolicy="no-referrer"
+          className={`w-full h-full object-cover object-center ${className}`}
+        />
+      );
+    }
+
+    // Elegant typographic fallback
+    const palette = [
+      'bg-[#292A27] text-[#F8F8F4]',
+      'bg-[#3E403B] text-[#E8EAE2]',
+      'bg-[#4A453F] text-[#F8F8F4]',
+      'bg-[#2A342B] text-[#DDE0D5]',
+      'bg-[#382D32] text-[#F8F8F4]'
+    ];
+    const colorIndex = Math.abs(book.title.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)) % palette.length;
+    const bgClass = palette[colorIndex];
+
+    return (
+      <div className={`w-full h-full p-4 flex flex-col justify-between ${bgClass} border-r-2 border-white/10 ${className}`}>
+        <div className="border-b border-white/15 pb-1">
+          <span className="text-[8.5px] font-mono tracking-widest uppercase opacity-75 block truncate">
+            {book.category_name || 'OpenBook Archive'}
+          </span>
+        </div>
+        <div className="my-auto py-2">
+          <h4 className={`font-serif font-bold leading-tight line-clamp-3 ${isLarge ? 'text-base sm:text-lg' : 'text-xs sm:text-sm'}`}>
+            {book.title}
+          </h4>
+          <p className="text-[10px] italic font-serif mt-1 opacity-80 line-clamp-1">
+            {book.author || 'Unknown Author'}
+          </p>
+        </div>
+        <div className="flex items-center justify-between text-[8px] font-mono border-t border-white/15 pt-1 opacity-70">
+          <span>{book.page_count ? `${book.page_count}p` : 'PDF'}</span>
+          <span>{formatFileSize(book.file_size)}</span>
+        </div>
+      </div>
+    );
+  };
+
   return (
-    <div className="w-full flex-1 flex flex-col bg-[#F7F3EC] text-[#181512] selection:bg-[#A52A22] selection:text-white font-body relative overflow-x-hidden">
+    <div className="w-full flex-1 flex flex-col bg-[#F8F8F4] text-[#292A27] selection:bg-[#E8EAE2] selection:text-[#292A27] font-body relative overflow-x-hidden">
       
       {/* =========================================================================
-          EXPERIENCE 1: THE CLEAN HERO VIEWPORT
-          - Streamlined Left Column: Generous breathing space, zero visual clutter,
-            focused typography, clean dynamic counter badge, search, and warm handwriting.
-          - Right Column: Preserved 3D architectural book portal enriched with
-            subtle living atmospheric light, drifting sunbeams, and footsteps into knowledge.
+          HERO SECTION (SECTIONS B, C, D, E)
+          Exact translation of the Pinterest reference:
+          - Centered editorial title: "Discover & Read {count} Books"
+          - Wide centered search bar with category selector dropdown
+          - Signature symmetrical multi-tiered book-cover composition
+          - Horizontal row of 5 minimalist feature shortcuts
           ========================================================================= */}
-      <section className="relative w-full min-h-[calc(100vh-68px)] flex flex-col justify-between py-3 sm:py-4 lg:py-2 xl:py-3 px-6 sm:px-10 lg:px-12 xl:px-16 max-w-[1536px] mx-auto">
+      <section className="relative w-full pt-10 sm:pt-14 pb-12 sm:pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         
-        {/* Main 2-Column Hero Grid */}
-        <div className="w-full flex-1 flex items-center">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-8 xl:gap-12 items-center w-full">
-            
-            {/* =====================================================================
-                LEFT COLUMN (~42% of desktop width) — CLEAN & BREATHABLE
-                ===================================================================== */}
-            <div className="lg:col-span-5 xl:col-span-5 flex flex-col items-start z-10 text-left max-w-[540px]">
-              
-              {/* Eyebrow Label with terracotta accent line */}
-              <div className="flex items-center gap-2.5 mb-3.5 sm:mb-4 lg:mb-3.5 xl:mb-4 select-none">
-                <span className="text-[10.5px] sm:text-[11.5px] xl:text-xs font-semibold tracking-[0.24em] text-[#181512] uppercase font-sans">
-                  THOUSANDS OF BOOKS. ONE LIBRARY.
-                </span>
-                <span className="w-7 sm:w-8 h-[1.5px] bg-[#A52A22] inline-block rounded-full" aria-hidden="true" />
-              </div>
+        {/* SECTION B: Large Centered Editorial Heading */}
+        <div className="text-center max-w-3xl mx-auto mb-7 sm:mb-8">
+          <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-[#E8EAE2]/70 border border-[#DDE0D5] text-[10.5px] font-semibold tracking-[0.2em] uppercase text-[#292A27]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#C98187]" />
+            <span>Open Access Public Domain Collection</span>
+          </div>
 
-              {/* Bold Editorial Headline: Exactly three lines, strong visual punch */}
-              <h1 className="font-editorial text-4xl sm:text-5xl lg:text-[46px] xl:text-[56px] 2xl:text-[64px] font-bold leading-[1.03] tracking-[-0.02em] select-none mb-3 sm:mb-3.5 lg:mb-3 xl:mb-3.5">
-                <span className="text-[#181512] block">A WORLD OF</span>
-                <span className="text-[#A52A22] block font-bold">KNOWLEDGE.</span>
-                <span className="text-[#181512] block whitespace-normal lg:whitespace-nowrap">WITHOUT WALLS.</span>
-              </h1>
+          <h1 className="font-editorial text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-[#292A27] leading-[1.12]">
+            Discover &amp; Read{' '}
+            <span className="text-[#C98187] font-serif italic font-normal">
+              {bookCount > 0 ? `${bookCount}+ Books` : 'Books'}
+            </span>
+          </h1>
 
-              {/* Supporting Subtitle */}
-              <p className="font-body text-sm sm:text-base lg:text-[15px] xl:text-[16.5px] text-[#5E5852] font-normal leading-relaxed max-w-md mb-4 sm:mb-4.5 lg:mb-3.5 xl:mb-4 select-text">
-                Discover. Read. Learn. Grow — All for Free.
-              </p>
+          <p className="font-sans text-sm sm:text-base text-[#85857E] mt-3 max-w-xl mx-auto leading-relaxed">
+            Explore a growing collection of books, discover new ideas, and find your next great read with universal browser reading.
+          </p>
+        </div>
 
-              {/* Functional Search Bar */}
-              <form 
-                onSubmit={handleSearchSubmit}
-                className="relative flex items-center w-full max-w-[430px] xl:max-w-[470px] bg-white border border-[#D9CEC2] rounded-full h-11 sm:h-12 lg:h-11 xl:h-11.5 px-2 pl-4 sm:pl-5 shadow-[0_4px_16px_rgba(24,21,18,0.03)] focus-within:border-[#A52A22] focus-within:ring-2 focus-within:ring-[#A52A22]/20 transition-all mb-4 sm:mb-4.5 lg:mb-3.5 xl:mb-4 group"
+        {/* SECTION C: Wide Elegant Search Bar with Category Selector */}
+        <div className="max-w-2xl lg:max-w-3xl mx-auto mb-12 sm:mb-16">
+          <form 
+            onSubmit={handleSearchSubmit}
+            className="bg-white rounded-full border border-[#E8E8E2] shadow-[0_4px_20px_rgba(41,42,39,0.05)] p-1.5 sm:p-2 pl-4 sm:pl-5 flex items-center gap-2 sm:gap-3 focus-within:border-[#C98187] focus-within:ring-2 focus-within:ring-[#C98187]/20 transition-all"
+          >
+            {/* Category Dropdown Selector on Left */}
+            <div className="relative shrink-0 hidden sm:flex items-center gap-1.5 pr-3 border-r border-[#E8E8E2] text-xs font-medium text-[#292A27]">
+              <LayoutGrid className="w-3.5 h-3.5 text-[#85857E]" />
+              <select
+                aria-label="Filter by category"
+                value={selectedSearchCategory}
+                onChange={(e) => setSelectedSearchCategory(e.target.value)}
+                className="bg-transparent text-[#292A27] text-xs focus:outline-none cursor-pointer pr-4 appearance-none"
               >
-                <Search className="w-4 h-4 sm:w-[18px] sm:h-[18px] text-[#5E5852] shrink-0 mr-3 group-focus-within:text-[#A52A22] transition-colors" />
-                <input
-                  id="hero-search-input"
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search books, authors, ideas..."
-                  aria-label="Search books, authors, ideas"
-                  className="w-full bg-transparent text-[#181512] placeholder-[#8B8177] text-xs sm:text-sm focus:outline-none pr-12 font-body"
-                />
-                <button
-                  type="submit"
-                  aria-label="Submit search"
-                  className="absolute right-1 w-9 h-9 sm:w-9.5 sm:h-9.5 rounded-full bg-[#A52A22] hover:bg-[#8E221B] text-white flex items-center justify-center transition-all cursor-pointer shadow-xs active:scale-95 group-hover:shadow-md"
-                >
-                  <ArrowRight className="w-4 h-4 text-white transition-transform duration-200 group-hover:translate-x-0.5" />
-                </button>
-              </form>
-
-              {/* Information Strip Below Search: Three Groups with Thin Neutral Separators */}
-              <div className="w-full flex items-center gap-4 sm:gap-6 lg:gap-5 xl:gap-8 pt-3 border-t border-[#D9CEC2]/60 max-w-[430px] xl:max-w-[470px]">
-                
-                {/* First Group: Dynamic Live Book Count from Database */}
-                <div className="flex flex-col">
-                  <div className="font-editorial text-xl sm:text-2xl xl:text-[26px] font-bold text-[#A52A22] leading-none mb-0.5 min-h-[26px] flex items-center">
-                    {loading && books.length === 0 ? (
-                      <span className="inline-block w-8 h-6 bg-[#D9CEC2]/60 rounded animate-pulse" />
-                    ) : (
-                      <span>{bookCount}</span>
-                    )}
-                  </div>
-                  <span className="font-body text-[10px] sm:text-xs font-semibold text-[#181512] tracking-wider uppercase">
-                    Books
-                  </span>
-                </div>
-
-                {/* Divider Line */}
-                <div className="h-7 w-[1px] bg-[#D9CEC2]" aria-hidden="true" />
-
-                {/* Second Group: Free For Everyone */}
-                <div className="flex flex-col">
-                  <span className="font-editorial text-lg sm:text-xl xl:text-[22px] font-bold text-[#181512] leading-none mb-0.5 min-h-[26px] flex items-center">
-                    Free
-                  </span>
-                  <span className="font-body text-[10px] sm:text-xs text-[#5E5852]">
-                    For Everyone
-                  </span>
-                </div>
-
-                {/* Divider Line */}
-                <div className="h-7 w-[1px] bg-[#D9CEC2]" aria-hidden="true" />
-
-                {/* Third Group: Open Source Community Driven */}
-                <div className="flex flex-col">
-                  <span className="font-editorial text-lg sm:text-xl xl:text-[22px] font-bold text-[#181512] leading-none mb-0.5 min-h-[26px] flex items-center">
-                    Open Source
-                  </span>
-                  <span className="font-body text-[10px] sm:text-xs text-[#5E5852]">
-                    Community Driven
-                  </span>
-                </div>
-
-              </div>
-
-              {/* Handwritten Annotation: Curved Arrow pointing to the Portal */}
-              <div className="relative mt-3 sm:mt-3.5 ml-1 flex items-center gap-2 select-none">
-                <svg 
-                  className="w-8 h-7 sm:w-9 sm:h-8 text-[#181512] shrink-0" 
-                  viewBox="0 0 48 40" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M6 34C12 24 22 14 36 8" />
-                  <path d="M26 6L37 8L34 19" />
-                </svg>
-                <div className="flex flex-col -rotate-3">
-                  <span className="font-handwriting text-base sm:text-lg xl:text-xl font-bold text-[#181512] leading-tight">
-                    Your next chapter
-                  </span>
-                  <span className="font-handwriting text-base sm:text-lg xl:text-xl font-bold text-[#181512] leading-tight">
-                    is here.
-                  </span>
-                </div>
-              </div>
-
+                <option value="all">All Categories</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-[10px] text-[#85857E] pointer-events-none -ml-3">▾</span>
             </div>
 
-            {/* =====================================================================
-                RIGHT COLUMN (~58% of desktop width)
-                PRESERVED 3D ARTWORK WITH LIVING BOOK ATMOSPHERE
-                - Artwork file, dimensions, proportions, and composition are 100% PRESERVED
-                - Overlaid with gentle living light motes and warm sunbeam glow
-                  that makes the girl's steps into the library feel naturally alive!
-                ===================================================================== */}
-            <div 
-              className="lg:col-span-7 xl:col-span-7 flex items-center justify-center relative w-full mt-2 lg:-mt-4 xl:-mt-6 cursor-pointer group"
-              onMouseEnter={() => setIsHoveredArtwork(true)}
-              onMouseLeave={() => setIsHoveredArtwork(false)}
+            {/* Search Input Field */}
+            <input
+              id="hero-search-input"
+              type="text"
+              placeholder="Type to search books, authors, subjects..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 bg-transparent text-xs sm:text-sm text-[#292A27] placeholder-[#85857E] focus:outline-none py-1.5 font-sans"
+            />
+
+            {/* Circular Search Action Button */}
+            <button
+              type="submit"
+              aria-label="Execute search"
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#292A27] hover:bg-[#3E403B] text-white flex items-center justify-center shrink-0 transition-all cursor-pointer shadow-xs active:scale-95"
+            >
+              <Search className="w-4 h-4 text-white stroke-[2.2]" />
+            </button>
+          </form>
+        </div>
+
+        {/* SECTION D: Beautiful Symmetrical Book-Cover Composition */}
+        <div className="w-full max-w-5xl mx-auto mb-14 sm:mb-20">
+          {heroBooks.length >= 3 ? (
+            <div className="relative flex items-center justify-center gap-3 sm:gap-4 lg:gap-6 min-h-[300px] sm:min-h-[360px] select-none py-4">
+              
+              {/* Outer Left Column: 2 Stacked Smaller Book Covers */}
+              {heroBooks[0] && (
+                <div className="hidden lg:flex flex-col gap-4 shrink-0">
+                  {/* Top Book */}
+                  <div
+                    onClick={() => onOpenBook(heroBooks[0].id)}
+                    className="w-24 xl:w-28 aspect-[2/3] rounded-md overflow-hidden shadow-md border border-[#E8E8E2] cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative group"
+                    title={heroBooks[0].title}
+                  >
+                    {renderBookCover(heroBooks[0])}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                  </div>
+
+                  {/* Bottom Book */}
+                  {heroBooks[1] && (
+                    <div
+                      onClick={() => onOpenBook(heroBooks[1].id)}
+                      className="w-24 xl:w-28 aspect-[2/3] rounded-md overflow-hidden shadow-md border border-[#E8E8E2] cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative group"
+                      title={heroBooks[1].title}
+                    >
+                      {renderBookCover(heroBooks[1])}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mid-Left Book: Medium Upright Cover */}
+              {heroBooks[2] && (
+                <div
+                  onClick={() => onOpenBook(heroBooks[2].id)}
+                  className="w-32 sm:w-36 md:w-44 lg:w-48 aspect-[2/3] rounded-r-md overflow-hidden shadow-xl border border-[#E8E8E2] cursor-pointer hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 relative group shrink-0"
+                  title={`${heroBooks[2].title} by ${heroBooks[2].author}`}
+                >
+                  {renderBookCover(heroBooks[2])}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                  <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-[11px] font-serif text-white font-bold truncate">{heroBooks[2].title}</p>
+                    <p className="text-[9px] text-[#E8EAE2] truncate">{heroBooks[2].author}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* CENTER HERO BOOK: Largest, Upright, Signature Focus */}
+              {heroBooks[3] && (
+                <div
+                  onClick={() => onOpenBook(heroBooks[3].id)}
+                  className="w-40 sm:w-48 md:w-56 lg:w-64 aspect-[2/3] rounded-r-md overflow-hidden shadow-2xl border-2 border-white/80 cursor-pointer hover:-translate-y-3 hover:scale-[1.02] transition-all duration-300 relative group z-20 shrink-0"
+                  title={`${heroBooks[3].title} by ${heroBooks[3].author}`}
+                >
+                  {renderBookCover(heroBooks[3], '', true)}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                  <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/85 via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <span className="text-[9px] uppercase font-mono tracking-wider text-[#C98187] block">Featured Volume</span>
+                    <p className="text-xs sm:text-sm font-serif text-white font-bold line-clamp-1">{heroBooks[3].title}</p>
+                    <p className="text-[10px] text-[#E8EAE2] truncate">{heroBooks[3].author}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Mid-Right Book: Medium Upright Cover */}
+              {heroBooks[4] && (
+                <div
+                  onClick={() => onOpenBook(heroBooks[4].id)}
+                  className="w-32 sm:w-36 md:w-44 lg:w-48 aspect-[2/3] rounded-r-md overflow-hidden shadow-xl border border-[#E8E8E2] cursor-pointer hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 relative group shrink-0"
+                  title={`${heroBooks[4].title} by ${heroBooks[4].author}`}
+                >
+                  {renderBookCover(heroBooks[4])}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                  <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p className="text-[11px] font-serif text-white font-bold truncate">{heroBooks[4].title}</p>
+                    <p className="text-[9px] text-[#E8EAE2] truncate">{heroBooks[4].author}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Outer Right Column: 2 Stacked Smaller Book Covers */}
+              {heroBooks[5] && (
+                <div className="hidden lg:flex flex-col gap-4 shrink-0">
+                  {/* Top Book */}
+                  <div
+                    onClick={() => onOpenBook(heroBooks[5].id)}
+                    className="w-24 xl:w-28 aspect-[2/3] rounded-md overflow-hidden shadow-md border border-[#E8E8E2] cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative group"
+                    title={heroBooks[5].title}
+                  >
+                    {renderBookCover(heroBooks[5])}
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                  </div>
+
+                  {/* Bottom Book */}
+                  {heroBooks[6] && (
+                    <div
+                      onClick={() => onOpenBook(heroBooks[6].id)}
+                      className="w-24 xl:w-28 aspect-[2/3] rounded-md overflow-hidden shadow-md border border-[#E8E8E2] cursor-pointer hover:-translate-y-1 hover:shadow-lg transition-all duration-300 relative group"
+                      title={heroBooks[6].title}
+                    >
+                      {renderBookCover(heroBooks[6])}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+              )}
+
+            </div>
+          ) : (
+            <div className="py-12 text-center text-[#85857E]">
+              <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">Loading bookstore library collection...</p>
+            </div>
+          )}
+        </div>
+
+        {/* SECTION E: Library Benefits & Feature Shortcuts (5 Minimalist Shortcuts) */}
+        <div className="w-full max-w-4xl mx-auto pt-4 border-t border-[#E8E8E2]">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            
+            {/* Shortcut 1: Browse Books */}
+            <button
               onClick={() => onNavigateBooks()}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
+              className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-white border border-[#E8E8E2] hover:border-[#C98187] hover:bg-[#F8F8F4] transition-all group cursor-pointer shadow-2xs"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#E8EAE2] group-hover:bg-[#C98187]/15 flex items-center justify-center text-[#292A27] group-hover:text-[#C98187] transition-colors mb-2">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[#292A27] group-hover:text-[#C98187] transition-colors">
+                Browse Books
+              </span>
+              <span className="text-[9.5px] text-[#85857E] mt-0.5">
+                Complete Catalog
+              </span>
+            </button>
+
+            {/* Shortcut 2: Categories */}
+            <button
+              onClick={() => onNavigateCategories()}
+              className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-white border border-[#E8E8E2] hover:border-[#C98187] hover:bg-[#F8F8F4] transition-all group cursor-pointer shadow-2xs"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#E8EAE2] group-hover:bg-[#C98187]/15 flex items-center justify-center text-[#292A27] group-hover:text-[#C98187] transition-colors mb-2">
+                <Layers className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[#292A27] group-hover:text-[#C98187] transition-colors">
+                Categories
+              </span>
+              <span className="text-[9.5px] text-[#85857E] mt-0.5">
+                {categories.length} Curated Topics
+              </span>
+            </button>
+
+            {/* Shortcut 3: Recently Added */}
+            <button
+              onClick={() => onNavigateBooks()}
+              className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-white border border-[#E8E8E2] hover:border-[#C98187] hover:bg-[#F8F8F4] transition-all group cursor-pointer shadow-2xs"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#E8EAE2] group-hover:bg-[#C98187]/15 flex items-center justify-center text-[#292A27] group-hover:text-[#C98187] transition-colors mb-2">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[#292A27] group-hover:text-[#C98187] transition-colors">
+                Recently Added
+              </span>
+              <span className="text-[9.5px] text-[#85857E] mt-0.5">
+                Fresh Arrivals
+              </span>
+            </button>
+
+            {/* Shortcut 4: Digital Reader */}
+            <button
+              onClick={() => {
+                if (books.length > 0) {
+                  onReadOnline(books[0].id);
+                } else {
                   onNavigateBooks();
                 }
               }}
-              aria-label="Explore Open Source Digital Library collection"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-white border border-[#E8E8E2] hover:border-[#C98187] hover:bg-[#F8F8F4] transition-all group cursor-pointer shadow-2xs"
             >
-              
-              {/* Static Artwork Container */}
-              <div className="relative w-full max-w-[760px] lg:max-w-[820px] xl:max-w-[920px] 2xl:max-w-[980px] flex items-center justify-center select-none">
-                
-                {/* 1. Underlying Preserved 3D Book Portal Artwork */}
-                <img 
-                  src={grandLibraryPortal}
-                  alt="Open Source Digital Library Grand Architectural Book Portal"
-                  className="w-full h-auto max-h-[min(68vh,640px)] lg:max-h-[min(68vh,640px)] xl:max-h-[min(74vh,720px)] 2xl:max-h-[min(78vh,780px)] object-contain select-none transition-transform duration-500 ease-out group-hover:scale-[1.01]"
-                  referrerPolicy="no-referrer"
-                />
-
-                {/* 2. LIVING ATMOSPHERE: Warm Ambient Library Glow in the archway where she walks */}
-                <div 
-                  className={`absolute left-[38%] top-[28%] w-[26%] h-[50%] rounded-full pointer-events-none transition-opacity duration-700 ${
-                    isHoveredArtwork ? 'opacity-80 scale-105' : 'opacity-45'
-                  }`}
-                  style={{
-                    background: 'radial-gradient(ellipse at center, rgba(255, 215, 140, 0.45) 0%, rgba(220, 140, 60, 0.18) 45%, transparent 70%)',
-                    filter: 'blur(20px)',
-                  }}
-                  aria-hidden="true"
-                />
-
-                {/* 3. LIVING ATMOSPHERE: Floating Sunlit Dust Motes in the arched doorway */}
-                <div className="absolute left-[40%] top-[34%] w-[20%] h-[40%] pointer-events-none overflow-hidden select-none" aria-hidden="true">
-                  {/* Dust Mote 1 */}
-                  <span 
-                    className="absolute bottom-6 left-6 w-1.5 h-1.5 rounded-full bg-[#FFE5A3] shadow-[0_0_8px_#FFE5A3] animate-mote-1" 
-                  />
-                  {/* Dust Mote 2 */}
-                  <span 
-                    className="absolute bottom-12 left-14 w-1 h-1 rounded-full bg-[#FFD180] shadow-[0_0_6px_#FFD180] animate-mote-2" 
-                  />
-                  {/* Dust Mote 3 */}
-                  <span 
-                    className="absolute bottom-4 left-10 w-1.5 h-1.5 rounded-full bg-[#FFF3D6] shadow-[0_0_8px_#FFF3D6] animate-mote-3" 
-                  />
-                </div>
-
-                {/* 4. LIVING ATMOSPHERE: Soft Footstep Shimmer on the book steps */}
-                <div 
-                  className="absolute left-[36%] bottom-[16%] w-[20%] h-[8%] rounded-full pointer-events-none animate-step-shimmer select-none"
-                  style={{
-                    background: 'radial-gradient(ellipse at center, rgba(255, 230, 170, 0.4) 0%, transparent 70%)',
-                    filter: 'blur(8px)',
-                  }}
-                  aria-hidden="true"
-                />
-
+              <div className="w-10 h-10 rounded-full bg-[#E8EAE2] group-hover:bg-[#C98187]/15 flex items-center justify-center text-[#292A27] group-hover:text-[#C98187] transition-colors mb-2">
+                <Compass className="w-5 h-5" />
               </div>
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[#292A27] group-hover:text-[#C98187] transition-colors">
+                Digital Reader
+              </span>
+              <span className="text-[9.5px] text-[#85857E] mt-0.5">
+                Instant In-Browser
+              </span>
+            </button>
 
-              {/* Bottom-Right Curved Decorative Stamp matching reference */}
-              <div 
-                className="hidden 2xl:flex absolute -bottom-2 right-0 pointer-events-none select-none w-28 h-28 items-center justify-center opacity-75"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 160 160" className="w-full h-full text-[#A52A22]/70">
-                  <path
-                    id="sealCirclePath"
-                    d="M 80, 80 m -60, 0 a 60,60 0 1,1 120,0 a 60,60 0 1,1 -120,0"
-                    fill="none"
-                  />
-                  <text className="text-[10px] font-mono tracking-[0.22em] uppercase fill-[#A52A22]">
-                    <textPath href="#sealCirclePath" startOffset="0%">
-                      KNOWLEDGE FOR A BRIGHTER TOMORROW ·
-                    </textPath>
-                  </text>
-                  <polygon 
-                    points="80,68 83,77 92,80 83,83 80,92 77,83 68,80 77,77" 
-                    fill="#A52A22" 
-                    opacity="0.8"
-                  />
-                </svg>
+            {/* Shortcut 5: About Library */}
+            <button
+              onClick={() => {
+                const el = document.getElementById('about-library-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="col-span-2 sm:col-span-1 flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl bg-white border border-[#E8E8E2] hover:border-[#C98187] hover:bg-[#F8F8F4] transition-all group cursor-pointer shadow-2xs"
+            >
+              <div className="w-10 h-10 rounded-full bg-[#E8EAE2] group-hover:bg-[#C98187]/15 flex items-center justify-center text-[#292A27] group-hover:text-[#C98187] transition-colors mb-2">
+                <Library className="w-5 h-5" />
               </div>
-
-            </div>
+              <span className="text-[11px] font-semibold tracking-wider uppercase text-[#292A27] group-hover:text-[#C98187] transition-colors">
+                About Library
+              </span>
+              <span className="text-[9.5px] text-[#85857E] mt-0.5">
+                Mission &amp; Values
+              </span>
+            </button>
 
           </div>
-        </div>
-
-        {/* =========================================================================
-            BOTTOM OF HERO: MINIMALIST EDITORIAL SCROLL INVITATION
-            A luxury vertical indicator inviting users to the second experience
-            ========================================================================= */}
-        <div className="w-full flex justify-between items-center pt-2 pb-1 border-t border-[#D9CEC2]/50 mt-2 select-none">
-          
-          <button
-            type="button"
-            onClick={handleScrollToExplore}
-            className="group flex items-center gap-3 text-left focus:outline-none cursor-pointer select-none opacity-80 hover:opacity-100 transition-opacity"
-            aria-label="Scroll to explore features and discovery"
-          >
-            <div className="relative w-[1.5px] h-6 sm:h-7 bg-[#D9CEC2] rounded-full overflow-hidden shrink-0">
-              <div className="w-full h-2 bg-[#A52A22] rounded-full animate-scroll-dot" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[9.5px] sm:text-[10px] tracking-[0.22em] font-semibold text-[#181512] uppercase font-sans group-hover:text-[#A52A22] transition-colors">
-                SCROLL TO EXPLORE
-              </span>
-              <span className="text-[8.5px] text-[#5E5852] tracking-wider uppercase font-sans">
-                Living Archive &amp; Community
-              </span>
-            </div>
-          </button>
-
-          {/* Quick catalog entry link */}
-          <button
-            type="button"
-            onClick={() => onNavigateBooks()}
-            className="text-[11px] font-medium text-[#5E5852] hover:text-[#A52A22] flex items-center gap-1.5 transition-colors cursor-pointer group"
-          >
-            <span>View All Volumes</span>
-            <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
-          </button>
-
         </div>
 
       </section>
 
 
       {/* =========================================================================
-          EXPERIENCE 2: THE DIGITAL ARCHIVE & EXPLORATION
-          Rich, informative second section below the hero:
-          - Core Feature Pillars (Free Access, Open Source, Learn & Grow, A Greener Future)
-          - Curated Category Quick Exploration Shelf
-          - Dynamic Library Statistics & Direct Action to Catalog
+          SECTION F: EXPLORE CATEGORIES (Clean Grid matching Pinterest reference)
           ========================================================================= */}
-      <section 
-        id="exploration-section"
-        className="w-full border-t border-[#D9CEC2] bg-[#F7F3EC] py-12 sm:py-16 px-6 sm:px-10 lg:px-12 xl:px-16"
-      >
-        <div className="max-w-[1536px] mx-auto flex flex-col gap-12 sm:gap-16">
+      <section className="w-full bg-[#F8F8F4] border-t border-[#E8E8E2] py-14 sm:py-18 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
           
           {/* Section Header */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[#D9CEC2]/70">
-            <div className="max-w-2xl">
-              <div className="flex items-center gap-2 mb-2">
-                <Compass className="w-4 h-4 text-[#A52A22]" />
-                <span className="text-xs font-semibold tracking-[0.2em] text-[#A52A22] uppercase font-sans">
-                  DISCOVER THE DIGITAL COMMONS
-                </span>
-              </div>
-              <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl font-bold text-[#181512] leading-tight">
-                Open Knowledge, Boundless Horizons.
+          <div className="flex items-end justify-between pb-6 mb-8 border-b border-[#E8E8E2]">
+            <div>
+              <span className="text-xs uppercase font-sans tracking-[0.2em] font-semibold text-[#C98187] block mb-1">
+                TOP CATEGORIES
+              </span>
+              <h2 className="font-editorial text-2xl sm:text-3xl lg:text-4xl font-bold text-[#292A27]">
+                Explore Categories
               </h2>
             </div>
-            <p className="font-body text-sm sm:text-base text-[#5E5852] max-w-md leading-relaxed">
-              Every book in our digital library is preserved, indexed, and made universally available. No subscriptions, no expiration dates, and no barriers.
-            </p>
-          </div>
-
-          {/* The 4 Feature Pillars Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
             
-            {/* Pillar 1: Free Access */}
-            <div className="bg-white/60 hover:bg-white p-6 rounded-2xl border border-[#D9CEC2]/80 transition-all duration-300 hover:shadow-md hover:-translate-y-1 flex flex-col justify-between group">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-[#EFE9DF] text-[#A52A22] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <BookOpen className="w-6 h-6 stroke-[1.8]" />
-                </div>
-                <h3 className="font-editorial text-xl font-bold text-[#181512] mb-2">
-                  Free Access
-                </h3>
-                <p className="font-body text-xs sm:text-sm text-[#5E5852] leading-relaxed">
-                  No paywalls, subscriptions, or credit cards. Download PDFs or read directly in your browser with zero limits.
-                </p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#A52A22] mt-4 block uppercase tracking-wider">
-                100% Unrestricted
-              </span>
-            </div>
-
-            {/* Pillar 2: Open Source */}
-            <div className="bg-white/60 hover:bg-white p-6 rounded-2xl border border-[#D9CEC2]/80 transition-all duration-300 hover:shadow-md hover:-translate-y-1 flex flex-col justify-between group">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-[#EFE9DF] text-[#A52A22] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <Users className="w-6 h-6 stroke-[1.8]" />
-                </div>
-                <h3 className="font-editorial text-xl font-bold text-[#181512] mb-2">
-                  Open Source
-                </h3>
-                <p className="font-body text-xs sm:text-sm text-[#5E5852] leading-relaxed">
-                  Powered by an international community of developers, archivists, and readers dedicated to knowledge preservation.
-                </p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#A52A22] mt-4 block uppercase tracking-wider">
-                Community Driven
-              </span>
-            </div>
-
-            {/* Pillar 3: Learn & Grow */}
-            <div className="bg-white/60 hover:bg-white p-6 rounded-2xl border border-[#D9CEC2]/80 transition-all duration-300 hover:shadow-md hover:-translate-y-1 flex flex-col justify-between group">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-[#EFE9DF] text-[#A52A22] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <Lightbulb className="w-6 h-6 stroke-[1.8]" />
-                </div>
-                <h3 className="font-editorial text-xl font-bold text-[#181512] mb-2">
-                  Learn &amp; Grow
-                </h3>
-                <p className="font-body text-xs sm:text-sm text-[#5E5852] leading-relaxed">
-                  Carefully organized literature across sciences, humanities, technology, philosophy, and historical classics.
-                </p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#A52A22] mt-4 block uppercase tracking-wider">
-                Curated Wisdom
-              </span>
-            </div>
-
-            {/* Pillar 4: A Greener Future */}
-            <div className="bg-white/60 hover:bg-white p-6 rounded-2xl border border-[#D9CEC2]/80 transition-all duration-300 hover:shadow-md hover:-translate-y-1 flex flex-col justify-between group">
-              <div>
-                <div className="w-12 h-12 rounded-xl bg-[#EFE9DF] text-[#A52A22] flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
-                  <Leaf className="w-6 h-6 stroke-[1.8]" />
-                </div>
-                <h3 className="font-editorial text-xl font-bold text-[#181512] mb-2">
-                  A Greener Future
-                </h3>
-                <p className="font-body text-xs sm:text-sm text-[#5E5852] leading-relaxed">
-                  Digital preservation and reading reduces paper consumption, shipping emissions, and ecological impact.
-                </p>
-              </div>
-              <span className="text-[11px] font-semibold text-[#A52A22] mt-4 block uppercase tracking-wider">
-                Zero Footprint
-              </span>
-            </div>
-
-          </div>
-
-          {/* Curated Category Quick-Browse Shelf */}
-          {categories.length > 0 && (
-            <div className="flex flex-col gap-4 p-8 rounded-2xl bg-[#EFE9DF]/70 border border-[#D9CEC2]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="font-editorial text-2xl font-bold text-[#181512]">
-                    Explore by Subject
-                  </h3>
-                  <p className="font-body text-xs sm:text-sm text-[#5E5852]">
-                    Jump straight into specific domains of interest.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={onNavigateCategories}
-                  className="text-xs font-semibold uppercase tracking-wider text-[#A52A22] hover:underline cursor-pointer"
-                >
-                  All Categories ({categories.length}) →
-                </button>
-              </div>
-
-              {/* Category Pills */}
-              <div className="flex flex-wrap gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => onNavigateBooks()}
-                  className="px-4 py-2 rounded-full bg-white text-[#181512] hover:bg-[#A52A22] hover:text-white border border-[#D9CEC2] text-xs font-medium transition-all duration-200 cursor-pointer shadow-2xs"
-                >
-                  All Titles ({bookCount})
-                </button>
-                {categories.slice(0, 8).map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => onSelectCategory(cat.id)}
-                    className="px-4 py-2 rounded-full bg-white/80 text-[#181512] hover:bg-[#A52A22] hover:text-white border border-[#D9CEC2] text-xs font-medium transition-all duration-200 cursor-pointer shadow-2xs"
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Library Stats Strip & Catalog Callout */}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-8 rounded-2xl bg-[#181512] text-white">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 sm:gap-12">
-              <div className="flex flex-col">
-                <span className="font-editorial text-3xl sm:text-4xl font-bold text-[#FFE5A3]">
-                  {bookCount}+
-                </span>
-                <span className="text-xs text-stone-400 font-sans uppercase tracking-wider mt-1">
-                  Available Volumes
-                </span>
-              </div>
-              <div className="h-10 w-[1px] bg-stone-700 hidden sm:block" aria-hidden="true" />
-              <div className="flex flex-col">
-                <span className="font-editorial text-3xl sm:text-4xl font-bold text-white">
-                  100%
-                </span>
-                <span className="text-xs text-stone-400 font-sans uppercase tracking-wider mt-1">
-                  Public Domain &amp; Open
-                </span>
-              </div>
-              <div className="h-10 w-[1px] bg-stone-700 hidden sm:block" aria-hidden="true" />
-              <div className="flex flex-col">
-                <span className="font-editorial text-3xl sm:text-4xl font-bold text-white">
-                  Zero
-                </span>
-                <span className="text-xs text-stone-400 font-sans uppercase tracking-wider mt-1">
-                  Fees or Tracking
-                </span>
-              </div>
-            </div>
-
             <button
-              type="button"
-              onClick={() => onNavigateBooks()}
-              className="w-full md:w-auto px-7 py-3.5 rounded-full bg-[#A52A22] hover:bg-[#B7332A] text-white font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2.5 shadow-md active:scale-95 cursor-pointer shrink-0"
+              onClick={onNavigateCategories}
+              className="text-xs font-semibold tracking-wider uppercase text-[#292A27] hover:text-[#C98187] flex items-center gap-1.5 transition-colors cursor-pointer group"
             >
-              <span>Explore All {bookCount} Books</span>
-              <ArrowRight className="w-4 h-4 text-white" />
+              <span>VIEW ALL</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
             </button>
           </div>
 
-          {/* Simple Minimalist Footer */}
-          <div className="pt-6 border-t border-[#D9CEC2]/60 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#5E5852]">
-            <p>
-              © {new Date().getFullYear()} OpenBook Digital Library. Built for universal access to human knowledge.
-            </p>
-            <div className="flex items-center gap-6">
-              <button 
-                type="button" 
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} 
-                className="hover:text-[#181512] transition-colors cursor-pointer"
-              >
-                Back to Top ↑
-              </button>
-            </div>
+          {/* Categories Grid (4 columns on desktop, 2 on tablet/mobile) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            {categories.slice(0, 8).map((cat) => {
+              const count = categoryCounts.get(cat.id) || 0;
+              return (
+                <div
+                  key={cat.id}
+                  onClick={() => onSelectCategory(cat.id)}
+                  className="bg-white rounded-xl border border-[#E8E8E2] hover:border-[#DDE0D5] p-5 flex items-center gap-4 transition-all duration-200 hover:shadow-xs hover:-translate-y-0.5 cursor-pointer group"
+                >
+                  <div className="w-11 h-11 rounded-lg bg-[#E8EAE2] group-hover:bg-[#C98187]/15 text-[#292A27] group-hover:text-[#C98187] flex items-center justify-center shrink-0 transition-colors">
+                    {getCategoryIcon(cat.name)}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-serif font-bold text-sm sm:text-base text-[#292A27] group-hover:text-[#C98187] transition-colors truncate">
+                      {cat.name}
+                    </h3>
+                    <p className="text-xs text-[#85857E] font-sans mt-0.5">
+                      {count} {count === 1 ? 'book' : 'books'}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
 
+        </div>
+      </section>
+
+
+      {/* =========================================================================
+          SECTION G: POPULAR OR FEATURED BOOKS ("Deciding What to Read Next?")
+          Rendered on a soft sage green background (#E8EAE2) matching the reference!
+          ========================================================================= */}
+      <section className="w-full bg-[#E8EAE2] border-t border-[#DDE0D5] py-14 sm:py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          
+          {/* Section Header */}
+          <div className="flex items-end justify-between pb-6 mb-8 border-b border-[#DDE0D5]">
+            <div>
+              <span className="text-xs uppercase font-sans tracking-[0.2em] font-semibold text-[#C98187] block mb-1">
+                CURATED SELECTION
+              </span>
+              <h2 className="font-editorial text-2xl sm:text-3xl lg:text-4xl font-bold text-[#292A27]">
+                Deciding What to Read Next?
+              </h2>
+            </div>
+
+            <button
+              onClick={() => onNavigateBooks()}
+              className="text-xs font-semibold tracking-wider uppercase text-[#292A27] hover:text-[#C98187] flex items-center gap-1.5 transition-colors cursor-pointer group"
+            >
+              <span>VIEW ALL</span>
+              <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />
+            </button>
+          </div>
+
+          {/* 4 Books Per Row Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-7">
+            {featuredBooks.map((book) => (
+              <article
+                key={book.id}
+                onClick={() => onOpenBook(book.id)}
+                className="bg-white rounded-xl border border-[#DDE0D5] overflow-hidden flex flex-col justify-between p-4 sm:p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group"
+              >
+                <div>
+                  {/* Book Cover Container with clean margins */}
+                  <div className="relative aspect-[2/3] w-full bg-[#F8F8F4] rounded-lg overflow-hidden border border-[#E8E8E2] mb-4 flex items-center justify-center shadow-xs group-hover:shadow-sm transition-shadow">
+                    {renderBookCover(book, 'transition-transform duration-300 group-hover:scale-103')}
+                    
+                    {/* Format Badge */}
+                    <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-xs border border-[#E8E8E2] text-[9.5px] font-mono font-medium text-[#292A27]">
+                      FREE PDF
+                    </div>
+                  </div>
+
+                  {/* Category Pill Tag */}
+                  <span className="inline-block text-[10px] font-sans font-semibold tracking-wider uppercase text-[#C98187] mb-1">
+                    {book.category_name || 'General Library'}
+                  </span>
+
+                  {/* Title & Author */}
+                  <h3 className="font-serif font-bold text-base text-[#292A27] group-hover:text-[#C98187] transition-colors line-clamp-1 leading-snug">
+                    {book.title}
+                  </h3>
+                  <p className="text-xs text-[#85857E] mt-1 line-clamp-1 font-sans">
+                    By {book.author || 'Unknown Author'}
+                  </p>
+                </div>
+
+                {/* Footer Action */}
+                <div className="pt-4 mt-4 border-t border-[#E8E8E2] flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-[#85857E]">
+                    {book.page_count ? `${book.page_count} pages` : 'Complete'}
+                  </span>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReadOnline(book.id);
+                    }}
+                    className="text-xs font-semibold text-[#292A27] group-hover:text-[#C98187] flex items-center gap-1 transition-colors"
+                  >
+                    <span>Read Online</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+        </div>
+      </section>
+
+
+      {/* =========================================================================
+          SECTION H: CALM EDITORIAL SECTION ("A Space for Curious Minds")
+          Minimalist and elegant editorial presentation
+          ========================================================================= */}
+      <section 
+        id="about-library-section" 
+        className="w-full bg-[#F8F8F4] border-t border-[#E8E8E2] py-16 sm:py-24 px-4 sm:px-6 lg:px-8"
+      >
+        <div className="max-w-4xl mx-auto text-center space-y-6">
+          <span className="text-xs uppercase font-sans tracking-[0.2em] font-semibold text-[#C98187]">
+            ABOUT THIS DIGITAL LIBRARY
+          </span>
+
+          <h2 className="font-editorial text-3xl sm:text-4xl lg:text-5xl font-bold text-[#292A27] leading-tight">
+            A Space for Curious Minds
+          </h2>
+
+          <p className="font-sans text-sm sm:text-base text-[#85857E] max-w-2xl mx-auto leading-relaxed">
+            A growing digital collection designed to make discovering, exploring, and reading books simple, accessible, and enjoyable for readers everywhere.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8 text-left">
+            <div className="bg-white p-6 rounded-xl border border-[#E8E8E2]">
+              <div className="w-9 h-9 rounded-lg bg-[#E8EAE2] text-[#292A27] flex items-center justify-center mb-4">
+                <BookOpen className="w-4.5 h-4.5" />
+              </div>
+              <h3 className="font-serif font-bold text-base text-[#292A27] mb-1.5">
+                Free &amp; Open Access
+              </h3>
+              <p className="text-xs text-[#85857E] leading-relaxed">
+                Zero paywalls or subscriptions. Direct access to every title directly in your web browser.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-[#E8E8E2]">
+              <div className="w-9 h-9 rounded-lg bg-[#E8EAE2] text-[#292A27] flex items-center justify-center mb-4">
+                <CheckCircle2 className="w-4.5 h-4.5" />
+              </div>
+              <h3 className="font-serif font-bold text-base text-[#292A27] mb-1.5">
+                Permanent Preservation
+              </h3>
+              <p className="text-xs text-[#85857E] leading-relaxed">
+                Each manuscript is digitally stored, indexed with bibliographic accuracy, and backed by Cloud Firestore.
+              </p>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-[#E8E8E2]">
+              <div className="w-9 h-9 rounded-lg bg-[#E8EAE2] text-[#292A27] flex items-center justify-center mb-4">
+                <Users className="w-4.5 h-4.5" />
+              </div>
+              <h3 className="font-serif font-bold text-base text-[#292A27] mb-1.5">
+                Community Commons
+              </h3>
+              <p className="text-xs text-[#85857E] leading-relaxed">
+                Dedicated to literature, business, personal development, sciences, and historical works for all.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

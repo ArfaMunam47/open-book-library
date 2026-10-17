@@ -218,8 +218,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onClick={() => setActiveTab('books')}
           className={`pb-3 font-medium transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'books'
-              ? 'border-amber-900 text-stone-900 font-semibold'
-              : 'border-transparent text-stone-500 hover:text-stone-800'
+              ? 'border-[#C98187] text-[#292A27] font-semibold'
+              : 'border-transparent text-[#85857E] hover:text-[#292A27]'
           }`}
         >
           <BookOpen className="w-4 h-4" />
@@ -230,8 +230,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           onClick={() => setActiveTab('categories')}
           className={`pb-3 font-medium transition-colors border-b-2 flex items-center gap-2 ${
             activeTab === 'categories'
-              ? 'border-amber-900 text-stone-900 font-semibold'
-              : 'border-transparent text-stone-500 hover:text-stone-800'
+              ? 'border-[#C98187] text-[#292A27] font-semibold'
+              : 'border-transparent text-[#85857E] hover:text-[#292A27]'
           }`}
         >
           <FolderTree className="w-4 h-4" />
